@@ -40,11 +40,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'app',
+    'dashboard',
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_spectacular',
     'django_filters',
-    # 'rest_framework_simplejwt.token_blacklist',  # token_blacklist jadvali uchun
 
 ]
 
