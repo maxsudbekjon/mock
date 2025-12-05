@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+
 
 
 class Test(models.Model):
@@ -15,6 +17,11 @@ class Test(models.Model):
     description = models.TextField(blank=True)
     difficulty_level = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='intermediate')
     is_published = models.BooleanField(default=False)
+
+    # Vaqt chegaralari (daqiqalarda)
+    # listening_duration = models.IntegerField(default=30, help_text="Listening vaqti (daqiqa)")
+    # reading_duration = models.IntegerField(default=60, help_text="Reading vaqti (daqiqa)")
+    # writing_duration = models.IntegerField(default=60, help_text="Writing vaqti (daqiqa)")
 
     created_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, related_name='created_tests')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -37,10 +44,45 @@ class ListeningSection(models.Model):
     # Audio
     audio_file = models.FileField(upload_to='listening/audios/')
     audio_duration = models.IntegerField(help_text="Duration in seconds")
-    # transcript = models.TextField(blank=True, help_text="Audio transcript (optional)")
 
     # Instructions
     instructions = models.TextField(blank=True)
+
+    # # Har bir qism uchun boshlanish vaqti
+    # listening_started_at = models.DateTimeField(null=True, blank=True)
+    # reading_started_at = models.DateTimeField(null=True, blank=True)
+    # writing_started_at = models.DateTimeField(null=True, blank=True)
+    #
+    # # Har bir qism uchun tugash vaqti
+    # listening_completed_at = models.DateTimeField(null=True, blank=True)
+    # reading_completed_at = models.DateTimeField(null=True, blank=True)
+    # writing_completed_at = models.DateTimeField(null=True, blank=True)
+    #
+    # def get_remaining_time(self, section_type):
+    #     """Qolgan vaqtni hisoblash (soniyalarda)"""
+    #     if section_type == 'listening':
+    #         started = self.listening_started_at
+    #         duration = self.test.listening_duration * 60  # daqiqadan soniyaga
+    #     elif section_type == 'reading':
+    #         started = self.reading_started_at
+    #         duration = self.test.reading_duration * 60
+    #     elif section_type == 'writing':
+    #         started = self.writing_started_at
+    #         duration = self.test.writing_duration * 60
+    #     else:
+    #         return None
+    #
+    #     if not started:
+    #         return duration  # Hali boshlanmagan
+    #
+    #     elapsed = (timezone.now() - started).total_seconds()
+    #     remaining = duration - elapsed
+    #
+    #     return max(0, int(remaining))  # Manfiy bo'lmasin
+    #
+    # def is_section_expired(self, section_type):
+    #     """Section vaqti tugaganmi?"""
+    #     return self.get_remaining_time(section_type) == 0
 
     created_at = models.DateTimeField(auto_now_add=True)
 

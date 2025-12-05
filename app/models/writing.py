@@ -7,10 +7,8 @@ class WritingTask(models.Model):
     """Writing tasks - har bir testda 2 ta task"""
 
     TASK_TYPE_CHOICES = [
-        ('data_description', 'Describe Data/Graph/Chart'),
-        ('letter', 'Letter Writing'),
-        ('essay', 'Essay'),
-        ('report', 'Report'),
+        ('TASK_1', 'Task 1 (Data/Letter)'),
+        ('TASK_2', 'Task 2 (Essay)'),
     ]
 
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='writing_tasks')

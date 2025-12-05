@@ -66,7 +66,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """User detail serializer"""
+    """User detail serializers"""
     is_profile_complete = serializers.SerializerMethodField()
 
     class Meta:

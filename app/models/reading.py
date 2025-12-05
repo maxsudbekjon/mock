@@ -14,7 +14,7 @@ class ReadingPassage(models.Model):
 
     # Optional metadata
     word_count = models.IntegerField(blank=True, null=True)
-    source = models.CharField(max_length=255, blank=True, help_text="Source of the passage")
+    # source = models.CharField(max_length=255, blank=True, help_text="Source of the passage")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -51,10 +51,10 @@ class ReadingQuestion(models.Model):
     options = models.JSONField(blank=True, null=True, help_text="Required for 'options' type")
 
     correct_answer = models.CharField(max_length=500)
-    points = models.IntegerField(default=1)
+    points = models.IntegerField(default=1, null=True, blank=True)
 
     # Metadata
-    explanation = models.TextField(blank=True)
+    # explanation = models.TextField(blank=True)
 
     class Meta:
         db_table = 'reading_questions'
