@@ -1,45 +1,39 @@
 from django.urls import path, include
-from app.views import RegisterView, LoginView, ProfileView,  \
-    ListeningAnswerSubmitView, \
-    ListeningBulkAnswerSubmitView, StudentListeningResultView, \
-    StudentListeningStatusView
+from .views import CustomTokenRefreshView
+from app.views import RegisterView, LoginView, ProfileView
 from rest_framework.routers import DefaultRouter
 
-from app.views import TestAttemptViewSet
+
+from .views import (
+    ListeningSubmissionViewSet,
+    ReadingSubmissionViewSet,
+    WritingSubmissionViewSet,
+    TestAttemptViewSet
+)
 
 router = DefaultRouter()
-router.register('attempts', TestAttemptViewSet, basename='attempt')
+router.register(r'listening', ListeningSubmissionViewSet, basename='listening')
+router.register(r'reading', ReadingSubmissionViewSet, basename='reading')
+router.register(r'writing', WritingSubmissionViewSet, basename='writing')
+router.register(r'attempts', TestAttemptViewSet, basename='attempts')
+
 
 
 urlpatterns = [
 
-    path('', include(router.urls)),
+    # path('', include(router.urls)),
 
-    # user
+    # user auth
     path('user/register/', RegisterView.as_view(), name='user_register'),
     path('user/login/', LoginView.as_view(), name='user_login'),
     path('user/profile/', ProfileView.as_view(), name='user_profile'),
+    path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
 
-    # Student endpoints
-    # path('tests/<int:test_id>/listening/',
-    #      ListeningSectionListView.as_view(),
-    #      name='listening-sections'),
+    #answer submit
+    path('submissions/', include(router.urls)),
 
-    path('listening/answer/',
-         ListeningAnswerSubmitView.as_view(),
-         name='listening-answer-submit'),
 
-    path('listening/bulk-answer/',
-         ListeningBulkAnswerSubmitView.as_view(),
-         name='listening-bulk-answer'),
 
-    path('listening/my-result/',
-         StudentListeningResultView.as_view(),
-         name='listening-my-result'),
-
-    path('listening/status/',
-         StudentListeningStatusView.as_view(),
-         name='listening-status'),
 
 
 ]

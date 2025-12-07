@@ -1,184 +1,224 @@
-
+# models.py
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
 
 
-
+# ==================== TEST ATTEMPT ====================
 class TestAttempt(models.Model):
-    """Student test attempts"""
+    """Student test urinishlari - barcha sectionlarni birlashtiruvchi"""
 
     STATUS_CHOICES = [
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
-        ('abandoned', 'Abandoned'),
     ]
 
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='test_attempts')
     test = models.ForeignKey('Test', on_delete=models.CASCADE, related_name='attempts')
 
+    # Vaqt tracking
     started_at = models.DateTimeField(auto_now_add=True)
-    completed_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='in_progress')
 
-    # Scores
-    listening_score = models.DecimalField(max_digits=3, decimal_places=1, blank=True, null=True)
-    reading_score = models.DecimalField(max_digits=3, decimal_places=1, blank=True, null=True)
-    writing_score = models.DecimalField(max_digits=3, decimal_places=1, blank=True, null=True)
-    overall_band_score = models.DecimalField(max_digits=3, decimal_places=1, blank=True, null=True)
+    # Band scores (Teacher tomonidan qo'yiladi)
+    listening_band = models.DecimalField(
+        max_digits=2, decimal_places=1,
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(9)],
+        help_text="Listening band score 0-9"
+    )
+    reading_band = models.DecimalField(
+        max_digits=2, decimal_places=1,
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(9)],
+        help_text="Reading band score 0-9"
+    )
+    writing_band = models.DecimalField(
+        max_digits=2, decimal_places=1,
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(9)],
+        help_text="Writing band score 0-9"
+    )
+    overall_band = models.DecimalField(
+        max_digits=2, decimal_places=1,
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(9)],
+        help_text="Overall band score"
+    )
+
+    # Teacher info
+    teacher_comment = models.TextField(blank=True, help_text="Teacher umumiy sharhi")
+    graded_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='graded_attempts'
+    )
+    graded_at = models.DateTimeField(null=True, blank=True)
 
     # Metadata
-    time_spent = models.IntegerField(default=0, help_text="Time spent in seconds")
-    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    listening_submitted = models.BooleanField(default=False)
+    listening_submitted_at = models.DateTimeField(null=True, blank=True)
+
+    reading_submitted = models.BooleanField(default=False)
+    reading_submitted_at = models.DateTimeField(null=True, blank=True)
+
+    writing_submitted = models.BooleanField(default=False)
+    writing_submitted_at = models.DateTimeField(null=True, blank=True)
+
+    # Section start times (vaqt hisoblash uchun)
+    listening_started_at = models.DateTimeField(null=True, blank=True)
+    reading_started_at = models.DateTimeField(null=True, blank=True)
+    writing_started_at = models.DateTimeField(null=True, blank=True)
+
+    def all_sections_submitted(self):
+        """Barcha sectionlar submitted bo'lganini tekshirish"""
+        return all([
+            self.listening_submitted,
+            self.reading_submitted,
+            self.writing_submitted
+        ])
 
     class Meta:
         db_table = 'test_attempts'
         ordering = ['-started_at']
+        unique_together = ['user', 'test']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['test', 'status']),
+            models.Index(fields=['graded_at']),
+        ]
 
     def __str__(self):
-        return f"{self.user.username} - {self.test.title} ({self.status})"
+        return f"{self.user.get_full_name()} - {self.test.title} ({self.status})"
 
-    def calculate_overall_score(self):
-        """Calculate overall band score from individual sections"""
-        scores = [s for s in [self.listening_score, self.reading_score, self.writing_score] if s is not None]
+    def mark_completed(self):
+        """Testni completed deb belgilash"""
+        if self.status != 'completed':
+            self.status = 'completed'
+            self.completed_at = timezone.now()
+            self.save(update_fields=['status', 'completed_at'])
 
-        if not scores:
-            return None
+    # def is_graded(self):
+    #     """Baholangan yoki yo'qligini tekshirish"""
+    #     return self.graded_at is not None
 
-        average = sum(scores) / len(scores)
+    def calculate_overall_band(self):
+        """Umumiy band score ni hisoblash"""
+        bands = [
+            self.listening_band,
+            self.reading_band,
+            self.writing_band
+        ]
 
-        # Round to nearest 0.5
-        self.overall_band_score = round(average * 2) / 2
-        self.save()
+        # Barcha band scorelar mavjud bo'lsa
+        if all(band is not None for band in bands):
+            average = sum(bands) / 3
+            # IELTS rounding: nearest 0.5
+            self.overall_band = round(average * 2) / 2
+            return self.overall_band
 
-        return self.overall_band_score
+        return None
 
 
+# ==================== LISTENING ANSWERS ====================
 class ListeningAnswer(models.Model):
-    """Student listening answers"""
+    """Listening javoblari"""
 
-    attempt = models.ForeignKey(TestAttempt, on_delete=models.CASCADE, related_name='listening_answers')
-    question = models.ForeignKey('ListeningQuestion', on_delete=models.CASCADE)
+    attempt = models.ForeignKey(
+        TestAttempt,
+        on_delete=models.CASCADE,
+        related_name='listening_answers'
+    )
+    question = models.ForeignKey(
+        'ListeningQuestion',
+        on_delete=models.CASCADE
+    )
 
-    user_answer = models.CharField(max_length=500)
-    is_correct = models.BooleanField(default=False)
+    # Student javobi
+    user_answer = models.CharField(max_length=500, blank=True)
 
+    # Vaqt
     answered_at = models.DateTimeField(auto_now_add=True)
-    time_spent = models.IntegerField(default=0, help_text="Time spent on this question in seconds")
 
     class Meta:
         db_table = 'listening_answers'
         unique_together = ['attempt', 'question']
-
-    def check_answer(self):
-        """Check if answer is correct"""
-        # Case-insensitive comparison, strip whitespace
-        user_ans = self.user_answer.strip().lower()
-        correct_ans = self.question.correct_answer.strip().lower()
-
-        self.is_correct = (user_ans == correct_ans)
-        self.save()
-
-        return self.is_correct
+        ordering = ['question__question_number']
 
     def __str__(self):
-        return f"Q{self.question.question_number}: {self.user_answer} ({'✓' if self.is_correct else '✗'})"
+        return f"Q{self.question.question_number}: {self.user_answer}"
 
 
+# ==================== READING ANSWERS ====================
 class ReadingAnswer(models.Model):
-    """Student reading answers"""
+    """Reading javoblari"""
 
-    attempt = models.ForeignKey(TestAttempt, on_delete=models.CASCADE, related_name='reading_answers')
-    question = models.ForeignKey('ReadingQuestion', on_delete=models.CASCADE)
+    attempt = models.ForeignKey(
+        TestAttempt,
+        on_delete=models.CASCADE,
+        related_name='reading_answers'
+    )
+    question = models.ForeignKey(
+        'ReadingQuestion',
+        on_delete=models.CASCADE
+    )
 
-    user_answer = models.CharField(max_length=500)
-    is_correct = models.BooleanField(default=False)
+    # Student javobi
+    user_answer = models.CharField(max_length=500, blank=True)
 
+    # Vaqt
     answered_at = models.DateTimeField(auto_now_add=True)
-    time_spent = models.IntegerField(default=0)
 
     class Meta:
         db_table = 'reading_answers'
         unique_together = ['attempt', 'question']
-
-    def check_answer(self):
-        """Check if answer is correct"""
-        user_ans = self.user_answer.strip().lower()
-        correct_ans = self.question.correct_answer.strip().lower()
-
-        self.is_correct = (user_ans == correct_ans)
-        self.save()
-
-        return self.is_correct
+        ordering = ['question__question_number']
 
     def __str__(self):
-        return f"Q{self.question.question_number}: {self.user_answer} ({'✓' if self.is_correct else '✗'})"
+        return f"Q{self.question.question_number}: {self.user_answer}"
 
 
+# ==================== WRITING SUBMISSION ====================
 class WritingSubmission(models.Model):
-    """Student writing submissions"""
+    """Writing javoblari - Task 1 va Task 2"""
 
-    attempt = models.ForeignKey(TestAttempt, on_delete=models.CASCADE, related_name='writing_submissions')
-    task = models.ForeignKey('WritingTask', on_delete=models.CASCADE)
+    attempt = models.ForeignKey(
+        TestAttempt,
+        on_delete=models.CASCADE,
+        related_name='writing_submissions'
+    )
+    task = models.ForeignKey(
+        'WritingTask',
+        on_delete=models.CASCADE
+    )
 
-    submission_text = models.TextField()
-    word_count = models.IntegerField()
+    # Student javobi
+    submission_text = models.TextField(blank=True)
+    word_count = models.IntegerField(default=0)
 
+    # Vaqt
     submitted_at = models.DateTimeField(auto_now_add=True)
-
-    # Teacher grading
-    graded_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='graded_writings')
-
-    # IELTS Writing criteria scores (0-9)
-    task_achievement = models.DecimalField(
-        max_digits=2, decimal_places=1, blank=True, null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(9)]
-    )
-    coherence_cohesion = models.DecimalField(
-        max_digits=2, decimal_places=1, blank=True, null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(9)]
-    )
-    lexical_resource = models.DecimalField(
-        max_digits=2, decimal_places=1, blank=True, null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(9)]
-    )
-    grammatical_accuracy = models.DecimalField(
-        max_digits=2, decimal_places=1, blank=True, null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(9)]
-    )
-
-    overall_score = models.DecimalField(max_digits=2, decimal_places=1, blank=True, null=True)
-
-    teacher_feedback = models.TextField(blank=True)
-    graded_at = models.DateTimeField(blank=True, null=True)
+    time_spent = models.IntegerField(default=0, help_text="Sekundlarda")
 
     class Meta:
         db_table = 'writing_submissions'
         unique_together = ['attempt', 'task']
+        ordering = ['task__task_number']
+        indexes = [
+            models.Index(fields=['submitted_at']),
+        ]
 
     def save(self, *args, **kwargs):
-        # Auto-calculate word count
+        """Word count avtomatik hisoblash"""
         if self.submission_text:
             self.word_count = len(self.submission_text.split())
         super().save(*args, **kwargs)
-
-    def calculate_overall_score(self):
-        """Calculate overall writing score from criteria"""
-        scores = [
-            self.task_achievement,
-            self.coherence_cohesion,
-            self.lexical_resource,
-            self.grammatical_accuracy
-        ]
-
-        if all(s is not None for s in scores):
-            average = sum(scores) / 4
-            # Round to nearest 0.5
-            self.overall_score = round(average * 2) / 2
-            self.save()
-
-            return self.overall_score
-
-        return None
 
     def __str__(self):
         return f"Task {self.task.task_number} - {self.word_count} words"

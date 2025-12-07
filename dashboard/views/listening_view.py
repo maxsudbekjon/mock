@@ -26,6 +26,7 @@ class ListeningSectionViewSet(viewsets.ModelViewSet):
     serializer_class = ListeningSectionSerializer
     permission_classes = [IsTeacherOrAdminOrReadOnly]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    ordering = ['id']
 
     def get_queryset(self):
         """Test ID bo'yicha filterlash imkonini beradi: /sections/?test_id=1"""

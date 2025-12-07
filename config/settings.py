@@ -115,7 +115,9 @@ AUTH_USER_MODEL = 'app.User'
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Tashkent'
+
+# TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
@@ -150,6 +152,9 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+
+    'DATETIME_FORMAT': "%d.%m.%Y %H:%M",
+
 }
 
 SPECTACULAR_SETTINGS = {
@@ -166,7 +171,7 @@ SPECTACULAR_SETTINGS = {
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),  # Access token amal qilish muddati
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Access token amal qilish muddati
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),     # Refresh token amal qilish muddati
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,

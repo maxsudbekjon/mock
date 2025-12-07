@@ -5,8 +5,7 @@ from app.models import Test
 
 
 class TestSerializer(serializers.ModelSerializer):
-    # User obyektini string (username) sifatida qaytarish yoki shunchaki ID.
-    # Read_only bo'lishi shart, chunki biz buni request.user dan olamiz
+
     created_by = serializers.StringRelatedField(read_only=True)
 
     class Meta:
