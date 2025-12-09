@@ -35,7 +35,7 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-'*'}
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-mock_db}
     ports:
-      - "8000:8000"
+      - "8010:8000"
     depends_on:
       db:
         condition: service_healthy
