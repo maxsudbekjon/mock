@@ -1,6 +1,6 @@
 from django.urls import path, include
 from .views import CustomTokenRefreshView
-from app.views import RegisterView, LoginView, ProfileView
+from app.views import RegisterView, LoginView, ProfileView, TeacherLoginAPIView
 from rest_framework.routers import DefaultRouter
 
 
@@ -28,6 +28,7 @@ urlpatterns = [
     path('user/login/', LoginView.as_view(), name='user_login'),
     path('user/profile/', ProfileView.as_view(), name='user_profile'),
     path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
+    path('teacher/login/', TeacherLoginAPIView.as_view(), name='teacher-login'),
 
     #answer submit
     path('submissions/', include(router.urls)),

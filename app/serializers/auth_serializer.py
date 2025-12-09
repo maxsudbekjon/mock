@@ -2,6 +2,8 @@ from django.core.validators import validate_domain_name
 from rest_framework import serializers
 from app.models import User
 from django.contrib.auth.password_validation import  validate_password
+from django.contrib.auth import authenticate
+
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -46,6 +48,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         return user
 
+
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     """Profile to'ldirish/yangilash"""
 
@@ -88,7 +91,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 
-
 class LoginSerializer(serializers.Serializer):
     """LOgin uchun"""
     username = serializers.CharField()
@@ -99,6 +101,28 @@ class LoginSerializer(serializers.Serializer):
         style={'input_type': 'password'},
         help_text="Foydalanuvchi paroli"
     )
+
+
+class TeacherLoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        username = attrs.get("username")
+        password = attrs.get("password")
+
+        user = authenticate(username=username, password=password)
+
+        if not user:
+            raise serializers.ValidationError("Noto‘g‘ri username yoki parol")
+
+        allowed_roles = ["teacher", "admin"]
+
+        if (user.role not in allowed_roles) and (not user.is_superuser):
+            raise serializers.ValidationError("Sizga teacher panelga kirish taqiqlangan")
+
+        attrs["user"] = user
+        return attrs
 
 
 

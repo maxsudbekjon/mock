@@ -104,9 +104,9 @@ class TestAttempt(models.Model):
             self.completed_at = timezone.now()
             self.save(update_fields=['status', 'completed_at'])
 
-    # def is_graded(self):
-    #     """Baholangan yoki yo'qligini tekshirish"""
-    #     return self.graded_at is not None
+    def is_graded(self):
+        """Baholangan yoki yo'qligini tekshirish"""
+        return self.graded_at is not None
 
     def calculate_overall_band(self):
         """Umumiy band score ni hisoblash"""

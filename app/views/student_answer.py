@@ -54,23 +54,7 @@ class ListeningSubmissionViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=['post'])
     def start(self, request):
-        """
-        Listening sectionni boshlash - vaqt limitini olish
-
-        POST /api/listening/start/
-        {
-            "test_id": 1
-        }
-
-        Response:
-        {
-            "attempt_id": 123,
-            "time_limit": 2060,  // Audio duration + 600 sekund
-            "audio_duration": 1460,  // Faqat audio
-            "extra_time": 600,  // 10 daqiqa
-            "started_at": "2025-12-07T10:00:00Z"
-        }
-        """
+        """Listening sectionni boshlash"""
         test_id = request.data.get('test_id')
         if not test_id:
             return Response(
@@ -80,7 +64,7 @@ class ListeningSubmissionViewSet(viewsets.ViewSet):
 
         test = get_object_or_404(Test, pk=test_id)
 
-        # TestAttempt yaratish yoki olish
+        # ✅ get_or_create ishlatish
         attempt, created = TestAttempt.objects.get_or_create(
             user=request.user,
             test=test,
@@ -90,20 +74,18 @@ class ListeningSubmissionViewSet(viewsets.ViewSet):
         # Listening allaqachon submitted bo'lsa
         if attempt.listening_submitted:
             return Response(
-                {'error': 'Listening allaqachon topshirilgan. Qayta boshlash mumkin emas'},
+                {'error': 'Listening allaqachon topshirilgan'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Listening start time ni belgilash (faqat birinchi marta)
+        # Listening start time
         if not attempt.listening_started_at:
             attempt.listening_started_at = timezone.now()
             attempt.save(update_fields=['listening_started_at'])
 
-        # Barcha sectionlarning audio durationini yig'ish
+        # Audio durationlarni yig'ish
         sections = ListeningSection.objects.filter(test=test)
         total_audio_duration = sum(section.audio_duration for section in sections)
-
-        # Time limit = audio + 10 daqiqa
         time_limit = total_audio_duration + 600
 
         return Response({
@@ -224,25 +206,25 @@ class ReadingSubmissionViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        # Kiruvchi ma'lumotni to'g'ridan-to'g'ri belgilash
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'test_id': {
+                        'type': 'integer',
+                        'description': 'Boshlanadigan testning ID raqami.'
+                    }
+                },
+                # test_id majburiy ekanligini ko'rsatadi
+                'required': ['test_id']
+            }
+        },
         responses={200: {'type': 'object'}}
     )
     @action(detail=False, methods=['post'])
     def start(self, request):
-        """
-        Reading sectionni boshlash
-
-        POST /api/reading/start/
-        {
-            "test_id": 1
-        }
-
-        Response:
-        {
-            "attempt_id": 123,
-            "time_limit": 3600,  // 60 daqiqa
-            "started_at": "2025-12-07T10:30:00Z"
-        }
-        """
+        """Reading sectionni boshlash"""
         test_id = request.data.get('test_id')
         if not test_id:
             return Response(
@@ -252,14 +234,12 @@ class ReadingSubmissionViewSet(viewsets.ViewSet):
 
         test = get_object_or_404(Test, pk=test_id)
 
-        # Attempt olish
-        try:
-            attempt = TestAttempt.objects.get(user=request.user, test=test)
-        except TestAttempt.DoesNotExist:
-            return Response(
-                {'error': 'Avval test boshlang'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # ✅ get_or_create ishlatish
+        attempt, created = TestAttempt.objects.get_or_create(
+            user=request.user,
+            test=test,
+            defaults={'status': 'in_progress'}
+        )
 
         # Reading allaqachon submitted bo'lsa
         if attempt.reading_submitted:
@@ -275,7 +255,7 @@ class ReadingSubmissionViewSet(viewsets.ViewSet):
 
         return Response({
             'attempt_id': attempt.id,
-            'time_limit': 3600,  # 60 minutes
+            'time_limit': 3600,
             'started_at': attempt.reading_started_at,
         })
 
@@ -376,18 +356,24 @@ class WritingSubmissionViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'test_id': {
+                        'type': 'integer',
+                        'description': 'Boshlanadigan testning ID raqami.'
+                    }
+                },
+
+                'required': ['test_id']
+            }
+        },
         responses={200: {'type': 'object'}}
     )
     @action(detail=False, methods=['post'])
     def start(self, request):
-        """
-        Writing sectionni boshlash
-
-        POST /api/writing/start/
-        {
-            "test_id": 1
-        }
-        """
+        """Writing sectionni boshlash"""
         test_id = request.data.get('test_id')
         if not test_id:
             return Response(
@@ -397,27 +383,29 @@ class WritingSubmissionViewSet(viewsets.ViewSet):
 
         test = get_object_or_404(Test, pk=test_id)
 
-        try:
-            attempt = TestAttempt.objects.get(user=request.user, test=test)
-        except TestAttempt.DoesNotExist:
-            return Response(
-                {'error': 'Avval test boshlang'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+        # ✅ YECHIM: get_or_create ishlatish
+        attempt, created = TestAttempt.objects.get_or_create(
+            user=request.user,
+            test=test,
+            defaults={'status': 'in_progress'}
+        )
+        # time_limit = WritingTask(test_id=test_id).time_suggestion
+        # print(time_limit)
+        # Writing allaqachon submitted bo'lsa
         if attempt.writing_submitted:
             return Response(
                 {'error': 'Writing allaqachon topshirilgan'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Writing start time
         if not attempt.writing_started_at:
             attempt.writing_started_at = timezone.now()
             attempt.save(update_fields=['writing_started_at'])
 
         return Response({
             'attempt_id': attempt.id,
-            'time_limit': 3600,  # 60 minutes
+            'time_limit': 3600,
             'started_at': attempt.writing_started_at,
         })
 

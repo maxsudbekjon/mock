@@ -12,6 +12,7 @@ LoginSerializer,
 )
 from app.models import User
 from drf_spectacular.utils import extend_schema
+from app.serializers import TeacherLoginSerializer
 
 
 @extend_schema(tags=['Authentication'])
@@ -130,6 +131,38 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
         # To'liq user ma'lumotini qaytaramiz
         return Response(UserSerializer(instance).data)
+
+
+@extend_schema(tags=['Authentication'],
+               request=TeacherLoginSerializer,
+               responses=200
+               )
+class TeacherLoginAPIView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        serializer = TeacherLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data["user"]
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "message": "Kirish muvaffaqiyatli!",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "role": user.role,
+                "is_superuser": user.is_superuser
+            },
+            "tokens": {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }
+        })
+
 
 
 
