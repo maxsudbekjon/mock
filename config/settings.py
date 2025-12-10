@@ -30,7 +30,14 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']    # localda
+ALLOWED_HOSTS = ['95.217.166.224', 'localhost', '127.0.0.1']
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://95.217.166.224:8010',
+    'http://localhost:8010',
+]
 
 
 # Application definition
