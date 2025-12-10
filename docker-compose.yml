@@ -1,4 +1,3 @@
-version: '3.9'
 
 services:
   db:
@@ -34,7 +33,7 @@ services:
       - ./staticfiles:/app/staticfiles
       - ./media:/app/media
     environment:
-      DEBUG: ${DEBUG:-False}
+      DEBUG: ${DEBUG:-True}
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-'*'}
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-mock_db}
