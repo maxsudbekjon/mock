@@ -1,5 +1,6 @@
+version: '3.9'
+
 services:
-  # ==================== PostgreSQL Database ====================
   db:
     image: postgres:16-alpine
     container_name: mock_db
@@ -17,20 +18,21 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    networks:
-      - mock_network
 
-  # ==================== Django Application ====================
   web:
     build: .
     container_name: mock_web
     command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py collectstatic --noinput &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"
+      sh -c "
+      python manage.py makemigrations --noinput &&
+      python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
+      "
     volumes:
       - ./staticfiles:/app/staticfiles
       - ./media:/app/media
+      - ./app/migrations:/app/app/migrations
     environment:
       DEBUG: ${DEBUG:-False}
       SECRET_KEY: ${SECRET_KEY}
@@ -42,13 +44,6 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-    networks:
-      - mock_network
 
 volumes:
   postgres_data:
-    driver: local
-
-networks:
-  mock_network:
-    driver: bridge
