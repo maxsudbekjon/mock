@@ -39,6 +39,9 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8010',
 ]
 
+CORS_ALLOW_ALL_ORIGINS = True  # Development uchun
+CORS_ALLOW_CREDENTIALS = True
+
 
 # Application definition
 
@@ -57,6 +60,10 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_filters',
 
+    'corsheaders',
+
+
+
 ]
 
 MIDDLEWARE = [
@@ -67,6 +74,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

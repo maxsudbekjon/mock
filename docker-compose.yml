@@ -30,15 +30,16 @@ services:
       gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
       "
     volumes:
-      - ./staticfiles:/app/staticfiles
-      - ./media:/app/media
+      - ./listening:/app/listening
+      - ./reading:/app/reading
+      - ./writing:/app/writing
     environment:
       DEBUG: ${DEBUG:-True}
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-'*'}
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-mock_db}
     ports:
-      - "8010:8000"
+      - "8011:8000"
     depends_on:
       db:
         condition: service_healthy
