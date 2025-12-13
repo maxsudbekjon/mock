@@ -14,7 +14,14 @@ class TestBasicSerializer(serializers.ModelSerializer):
 
 
 class ReadingQuestionSerializer(serializers.ModelSerializer):
-    """Reading Question Serializer - for teachers"""
+    """
+    Reading Question Serializer - O'qituvchilar uchun (to'liq)
+    """
+
+    # Helper fields - @property methodlardan avtomatik
+    # options = serializers.ReadOnlyField()
+    # matching_items = serializers.ReadOnlyField()
+    # word_limit = serializers.ReadOnlyField()
 
     class Meta:
         model = ReadingQuestion
@@ -24,42 +31,51 @@ class ReadingQuestionSerializer(serializers.ModelSerializer):
             'question_number',
             'question_text',
             'question_type',
-            'options',
+            'question_data',
             'correct_answer',
-            # 'points',
-            # 'explanation'
+            'points',
+            # Helper fields (read-only)
+            # 'options',
+            # 'matching_items',
+            # 'word_limit',
         ]
         read_only_fields = ['id']
 
     def validate(self, data):
-        """
-        Modeldagi clean() metodiga o'xshash validatsiya.
-        Agar type='options' bo'lsa, options maydoni bo'sh bo'lmasligi kerak.
-        """
+        """Validation - yangi model uchun"""
         question_type = data.get('question_type')
-        options = data.get('options')
+        question_data = data.get('question_data', {})
 
-        if question_type == 'options' and not options:
-            raise serializers.ValidationError(
-                {"options": "Multiple Choice savollari uchun variantlar kiritilishi shart."}
-            )
+        if question_type == 'multiple_choice':
+            if not question_data or 'options' not in question_data:
+                raise serializers.ValidationError({
+                    'question_data': 'Multiple choice uchun "options" kerak'
+                })
+            if not isinstance(question_data['options'], list) or len(question_data['options']) < 2:
+                raise serializers.ValidationError({
+                    'question_data': 'Kamida 2 ta variant bo\'lishi kerak'
+                })
+
+        elif question_type == 'matching':
+            if not question_data or 'items' not in question_data:
+                raise serializers.ValidationError({
+                    'question_data': 'Matching uchun "items" kerak'
+                })
+            if not isinstance(question_data['items'], list):
+                raise serializers.ValidationError({
+                    'question_data': '"items" list bo\'lishi kerak'
+                })
+
         return data
-
-    def validate(self, attrs):
-        """Cross-field validation"""
-        question_type = attrs.get('question_type')
-        options = attrs.get('options')
-
-        if question_type == 'options' and not options:
-            raise serializers.ValidationError({
-                'options': 'Options are required for multiple choice questions'
-            })
-
-        return attrs
 
 
 class ReadingQuestionListSerializer(serializers.ModelSerializer):
-    """Simplified serializer for listing questions (for students)"""
+    """
+    O'quvchilar uchun - correct_answer ni yashirish
+    """
+    options = serializers.ReadOnlyField()
+    matching_items = serializers.ReadOnlyField()
+    word_limit = serializers.ReadOnlyField()
 
     class Meta:
         model = ReadingQuestion
@@ -68,9 +84,72 @@ class ReadingQuestionListSerializer(serializers.ModelSerializer):
             'question_number',
             'question_text',
             'question_type',
+            # 'points',
+            # Helper fields
             'options',
-            # 'points'
+            'matching_items',
+            'word_limit',
         ]
+
+
+# class ReadingQuestionSerializer(serializers.ModelSerializer):
+#     """Reading Question Serializer - for teachers"""
+#
+#     class Meta:
+#         model = ReadingQuestion
+#         fields = [
+#             'id',
+#             'passage',
+#             'question_number',
+#             'question_text',
+#             'question_type',
+#             'options',
+#             'correct_answer',
+#             # 'points',
+#             # 'explanation'
+#         ]
+#         read_only_fields = ['id']
+#
+#     def validate(self, data):
+#         """
+#         Modeldagi clean() metodiga o'xshash validatsiya.
+#         Agar type='options' bo'lsa, options maydoni bo'sh bo'lmasligi kerak.
+#         """
+#         question_type = data.get('question_type')
+#         options = data.get('options')
+#
+#         if question_type == 'options' and not options:
+#             raise serializers.ValidationError(
+#                 {"options": "Multiple Choice savollari uchun variantlar kiritilishi shart."}
+#             )
+#         return data
+#
+#     def validate(self, attrs):
+#         """Cross-field validation"""
+#         question_type = attrs.get('question_type')
+#         options = attrs.get('options')
+#
+#         if question_type == 'options' and not options:
+#             raise serializers.ValidationError({
+#                 'options': 'Options are required for multiple choice questions'
+#             })
+#
+#         return attrs
+#
+#
+# class ReadingQuestionListSerializer(serializers.ModelSerializer):
+#     """Simplified serializer for listing questions (for students)"""
+#
+#     class Meta:
+#         model = ReadingQuestion
+#         fields = [
+#             'id',
+#             'question_number',
+#             'question_text',
+#             'question_type',
+#             'options',
+#             # 'points'
+#         ]
 
 
 class ReadingPassageSerializer(serializers.ModelSerializer):
@@ -159,6 +238,7 @@ class ReadingPassageListSerializer(serializers.ModelSerializer):
             'test_info',
             'passage_number',
             'title',
+            'passage_text',
             'word_count',
             'questions_count'
         ]

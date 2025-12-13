@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from .listening import Test
+from django.core.exceptions import ValidationError
+
 
 
 class ReadingPassage(models.Model):
@@ -37,24 +39,45 @@ class ReadingQuestion(models.Model):
     """Reading passage savollari"""
 
     QUESTION_TYPE_CHOICES = [
-        ('written', 'Written Answer'),  # Yozma javob
-        ('options', 'Multiple Choice'),  # Variantlar
+        ('multiple_choice', 'Multiple Choice'),
+        ('true_false', 'True/False/Not Given'),
+        ('yes_no', 'Yes/No/Not Given'),
+        ('completion', 'Completion'),
+        ('matching', 'Matching'),
+        ('short_answer', 'Short Answer'),
     ]
 
-    passage = models.ForeignKey(ReadingPassage, on_delete=models.CASCADE, related_name='questions')
+    passage = models.ForeignKey('ReadingPassage', on_delete=models.CASCADE, related_name='questions')
     question_number = models.IntegerField()
-
     question_text = models.TextField()
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
 
-    # Options (faqat 'options' type uchun)
-    options = models.JSONField(blank=True, null=True, help_text="Required for 'options' type")
+    # Barcha qo'shimcha ma'lumotlar - BITTA field
+    question_data = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="""
+        Multiple Choice: {"options": ["A) ...", "B) ..."]}
+        True/False/Yes/No: {} (bo'sh, options avtomatik)
+        Completion: {"word_limit": 2} (ixtiyoriy)
+        Matching: {"items": ["1. Heading A", "2. Heading B"], "paragraphs": ["A", "B", "C"]}
+        Short Answer: {"word_limit": 3}
+        """
+    )
 
-    correct_answer = models.CharField(max_length=500)
-    points = models.IntegerField(default=1, null=True, blank=True)
+    # To'g'ri javob - barcha typelar uchun BITTA field
+    correct_answer = models.JSONField(
+        help_text="""
+        Multiple Choice: "A"
+        True/False: "True" or "False" or "Not Given"
+        Yes/No: "Yes" or "No" or "Not Given"
+        Completion: "answer" or ["answer1", "answer2"]
+        Matching: {"1": "C", "2": "A"}
+        Short Answer: "answer" or ["answer1", "answer2"]
+        """
+    )
 
-    # Metadata
-    # explanation = models.TextField(blank=True)
+    points = models.IntegerField(default=1)
 
     class Meta:
         db_table = 'reading_questions'
@@ -62,10 +85,117 @@ class ReadingQuestion(models.Model):
         unique_together = ['passage', 'question_number']
 
     def __str__(self):
-        return f"Q{self.question_number}: {self.question_text[:50]}"
+        return f"Q{self.question_number} ({self.get_question_type_display()})"
 
     def clean(self):
-        """Validate that options are provided for 'options' type"""
-        from django.core.exceptions import ValidationError
-        if self.question_type == 'options' and not self.options:
-            raise ValidationError("Options are required for multiple choice questions")
+        """Validation"""
+        if self.question_type == 'multiple_choice':
+            if not self.question_data or 'options' not in self.question_data:
+                raise ValidationError({
+                    'question_data': 'Multiple choice uchun "options" kerak'
+                })
+
+        elif self.question_type == 'matching':
+            if not self.question_data or 'items' not in self.question_data:
+                raise ValidationError({
+                    'question_data': 'Matching uchun "items" kerak'
+                })
+
+    # def check_answer(self, user_answer):
+    #     """Javobni tekshirish"""
+    #     import re
+    #
+    #     if self.question_type == 'multiple_choice':
+    #         return str(user_answer).strip().upper() == str(self.correct_answer).strip().upper()
+    #
+    #     elif self.question_type in ['true_false', 'yes_no']:
+    #         return str(user_answer).strip().lower() == str(self.correct_answer).strip().lower()
+    #
+    #     elif self.question_type in ['completion', 'short_answer']:
+    #         def normalize(text):
+    #             return re.sub(r'[^\w\s]', '', str(text).lower()).strip()
+    #
+    #         # Agar list bo'lsa
+    #         if isinstance(self.correct_answer, list):
+    #             if not isinstance(user_answer, list):
+    #                 return False
+    #             return all(normalize(ua) == normalize(ca) for ua, ca in zip(user_answer, self.correct_answer))
+    #
+    #         return normalize(user_answer) == normalize(self.correct_answer)
+    #
+    #     elif self.question_type == 'matching':
+    #         if not isinstance(user_answer, dict):
+    #             return False
+    #         return user_answer == self.correct_answer
+    #
+    #     return False
+
+    # Helper properties
+
+
+    @property
+    def options(self):
+        """Multiple choice options"""
+        if self.question_type == 'multiple_choice' and self.question_data:
+            return self.question_data.get('options', [])
+        elif self.question_type == 'true_false':
+            return ['True', 'False', 'Not Given']
+        elif self.question_type == 'yes_no':
+            return ['Yes', 'No', 'Not Given']
+        return []
+
+    @property
+    def matching_items(self):
+        """Matching items"""
+        if self.question_type == 'matching' and self.question_data:
+            return {
+                'items': self.question_data.get('items', []),
+                'paragraphs': self.question_data.get('paragraphs', [])
+            }
+        return {'items': [], 'paragraphs': []}
+
+    @property
+    def word_limit(self):
+        """Word limit"""
+        if self.question_type in ['completion', 'short_answer'] and self.question_data:
+            return self.question_data.get('word_limit')
+        return None
+
+
+
+# class ReadingQuestion(models.Model):
+#     """Reading passage savollari"""
+#
+#     QUESTION_TYPE_CHOICES = [
+#         ('written', 'Written Answer'),  # Yozma javob
+#         ('options', 'Multiple Choice'),  # Variantlar
+#     ]
+#
+#     passage = models.ForeignKey(ReadingPassage, on_delete=models.CASCADE, related_name='questions')
+#     question_number = models.IntegerField()
+#
+#     question_text = models.TextField()
+#     question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
+#
+#     # Options (faqat 'options' type uchun)
+#     options = models.JSONField(blank=True, null=True, help_text="Required for 'options' type")
+#
+#     correct_answer = models.CharField(max_length=500)
+#     points = models.IntegerField(default=1, null=True, blank=True)
+#
+#     # Metadata
+#     # explanation = models.TextField(blank=True)
+#
+#     class Meta:
+#         db_table = 'reading_questions'
+#         ordering = ['question_number']
+#         unique_together = ['passage', 'question_number']
+#
+#     def __str__(self):
+#         return f"Q{self.question_number}: {self.question_text[:50]}"
+#
+#     def clean(self):
+#         """Validate that options are provided for 'options' type"""
+#         from django.core.exceptions import ValidationError
+#         if self.question_type == 'options' and not self.options:
+#             raise ValidationError("Options are required for multiple choice questions")

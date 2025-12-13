@@ -119,13 +119,13 @@ class ReadingPassageViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-@extend_schema(tags=['Reading question crud'])
+@extend_schema(tags=['Reading question'])
 class ReadingQuestionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing Reading Questions
 
-    Teachers: Full CRUD access
-    Students: Read-only access (without answers)
+    Teachers/Admin: Full CRUD access
+    Students: Read-only access (without correct_answer)
     """
     queryset = ReadingQuestion.objects.all().select_related('passage')
     permission_classes = [IsTeacherOrAdminOrReadOnly]
@@ -158,19 +158,6 @@ class ReadingQuestionViewSet(viewsets.ModelViewSet):
         """List all questions with optional filtering by passage_id or test_id"""
         return super().list(request, *args, **kwargs)
 
-    @extend_schema(
-        request=ReadingQuestionSerializer,
-        responses={
-            201: ReadingQuestionSerializer,
-            400: OpenApiTypes.OBJECT
-        },
-        description="Create a single reading question"
-    )
-    def create(self, request, *args, **kwargs):
-        """Create a single question"""
-        return super().create(request, *args, **kwargs)
-
-
     def get_queryset(self):
         """Filter questions by passage_id or test_id if provided"""
         queryset = super().get_queryset()
@@ -186,12 +173,58 @@ class ReadingQuestionViewSet(viewsets.ModelViewSet):
         return queryset.order_by('question_number')
 
     @extend_schema(
+        request=ReadingQuestionSerializer,
+        responses={
+            201: ReadingQuestionSerializer,
+            400: OpenApiTypes.OBJECT
+        },
+        description="""
+        Create a single reading question.
+
+        Supported question types:
+        - multiple_choice: question_data = {"options": ["A) ...", "B) ..."]}
+        - true_false: question_data = {} (options automatic: True/False/Not Given)
+        - yes_no: question_data = {} (options automatic: Yes/No/Not Given)
+        - completion: question_data = {"word_limit": 2} (optional)
+        - matching: question_data = {"items": [...], "paragraphs": ["A", "B", ...]}
+        - short_answer: question_data = {"word_limit": 3} (optional)
+        """
+    )
+    def create(self, request, *args, **kwargs):
+        """Create a single question"""
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
         request=ReadingQuestionSerializer(many=True),
         responses={
             201: ReadingQuestionSerializer(many=True),
             400: OpenApiTypes.OBJECT
         },
-        description="Create multiple reading questions at once for a passage"
+        description="""
+        Create multiple reading questions at once for a passage.
+
+        Example request body:
+        [
+            {
+                "passage": 1,
+                "question_number": 1,
+                "question_text": "What is the main idea?",
+                "question_type": "multiple_choice",
+                "question_data": {"options": ["A) Economy", "B) Technology"]},
+                "correct_answer": "B",
+                "points": 1
+            },
+            {
+                "passage": 1,
+                "question_number": 2,
+                "question_text": "The author supports renewable energy.",
+                "question_type": "true_false",
+                "question_data": {},
+                "correct_answer": "True",
+                "points": 1
+            }
+        ]
+        """
     )
     @action(detail=False, methods=['post'])
     def bulk_create(self, request):
@@ -207,44 +240,133 @@ class ReadingQuestionViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                name='answer',
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description='User answer to check',
-                required=True
-            )
-        ],
-        responses={
-            200: OpenApiTypes.OBJECT,
-            400: OpenApiTypes.OBJECT
-        }
-    )
-    @action(detail=True, methods=['get'])
-    def check_answer(self, request, pk=None):
-        """Check if provided answer is correct (for practice mode)"""
-        question = self.get_object()
-        user_answer = request.query_params.get('answer', '').strip()
 
-        if not user_answer:
-            return Response(
-                {'error': 'Answer parameter is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        is_correct = user_answer.lower() == question.correct_answer.lower()
-
-        response_data = {
-            'is_correct': is_correct,
-            'points': question.points if is_correct else 0
-        }
-
-        # Show correct answer and explanation only to teachers
-        if request.user.role == 'teacher' or request.user.role == 'admin':
-            response_data['correct_answer'] = question.correct_answer
-            # response_data['explanation'] = question.explanation
-
-        return Response(response_data)
+# @extend_schema(tags=['Reading question crud'])
+# class ReadingQuestionViewSet(viewsets.ModelViewSet):
+#     """
+#     ViewSet for managing Reading Questions
+#
+#     Teachers: Full CRUD access
+#     Students: Read-only access (without answers)
+#     """
+#     queryset = ReadingQuestion.objects.all().select_related('passage')
+#     permission_classes = [IsTeacherOrAdminOrReadOnly]
+#
+#     def get_serializer_class(self):
+#         """Return appropriate serializer based on user role"""
+#         if self.request.user.role == 'teacher' or self.request.user.role == 'admin':
+#             return ReadingQuestionSerializer
+#         return ReadingQuestionListSerializer
+#
+#     @extend_schema(
+#         parameters=[
+#             OpenApiParameter(
+#                 name='passage_id',
+#                 type=OpenApiTypes.INT,
+#                 location=OpenApiParameter.QUERY,
+#                 description='Filter questions by passage ID',
+#                 required=False
+#             ),
+#             OpenApiParameter(
+#                 name='test_id',
+#                 type=OpenApiTypes.INT,
+#                 location=OpenApiParameter.QUERY,
+#                 description='Filter questions by test ID',
+#                 required=False
+#             )
+#         ]
+#     )
+#     def list(self, request, *args, **kwargs):
+#         """List all questions with optional filtering by passage_id or test_id"""
+#         return super().list(request, *args, **kwargs)
+#
+#     @extend_schema(
+#         request=ReadingQuestionSerializer,
+#         responses={
+#             201: ReadingQuestionSerializer,
+#             400: OpenApiTypes.OBJECT
+#         },
+#         description="Create a single reading question"
+#     )
+#     def create(self, request, *args, **kwargs):
+#         """Create a single question"""
+#         return super().create(request, *args, **kwargs)
+#
+#
+#     def get_queryset(self):
+#         """Filter questions by passage_id or test_id if provided"""
+#         queryset = super().get_queryset()
+#         passage_id = self.request.query_params.get('passage_id')
+#         test_id = self.request.query_params.get('test_id')
+#
+#         if passage_id:
+#             queryset = queryset.filter(passage_id=passage_id)
+#
+#         if test_id:
+#             queryset = queryset.filter(passage__test_id=test_id)
+#
+#         return queryset.order_by('question_number')
+#
+#     @extend_schema(
+#         request=ReadingQuestionSerializer(many=True),
+#         responses={
+#             201: ReadingQuestionSerializer(many=True),
+#             400: OpenApiTypes.OBJECT
+#         },
+#         description="Create multiple reading questions at once for a passage"
+#     )
+#     @action(detail=False, methods=['post'])
+#     def bulk_create(self, request):
+#         """Create multiple questions at once for a passage"""
+#         if not isinstance(request.data, list):
+#             return Response(
+#                 {'error': 'Expected a list of questions'},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#
+#         serializer = ReadingQuestionSerializer(data=request.data, many=True)
+#         serializer.is_valid(raise_exception=True)
+#         self.perform_create(serializer)
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+#
+#     @extend_schema(
+#         parameters=[
+#             OpenApiParameter(
+#                 name='answer',
+#                 type=OpenApiTypes.STR,
+#                 location=OpenApiParameter.QUERY,
+#                 description='User answer to check',
+#                 required=True
+#             )
+#         ],
+#         responses={
+#             200: OpenApiTypes.OBJECT,
+#             400: OpenApiTypes.OBJECT
+#         }
+#     )
+#     @action(detail=True, methods=['get'])
+#     def check_answer(self, request, pk=None):
+#         """Check if provided answer is correct (for practice mode)"""
+#         question = self.get_object()
+#         user_answer = request.query_params.get('answer', '').strip()
+#
+#         if not user_answer:
+#             return Response(
+#                 {'error': 'Answer parameter is required'},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#
+#         is_correct = user_answer.lower() == question.correct_answer.lower()
+#
+#         response_data = {
+#             'is_correct': is_correct,
+#             'points': question.points if is_correct else 0
+#         }
+#
+#         # Show correct answer and explanation only to teachers
+#         if request.user.role == 'teacher' or request.user.role == 'admin':
+#             response_data['correct_answer'] = question.correct_answer
+#             # response_data['explanation'] = question.explanation
+#
+#         return Response(response_data)
 
