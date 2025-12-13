@@ -103,26 +103,26 @@ class LoginSerializer(serializers.Serializer):
     )
 
 
-class TeacherLoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    password = serializers.CharField(write_only=True)
-
-    def validate(self, attrs):
-        username = attrs.get("username")
-        password = attrs.get("password")
-
-        user = authenticate(username=username, password=password)
-
-        if not user:
-            raise serializers.ValidationError("Noto‘g‘ri username yoki parol")
-
-        allowed_roles = ["teacher", "admin"]
-
-        if (user.role not in allowed_roles) and (not user.is_superuser):
-            raise serializers.ValidationError("Sizga teacher panelga kirish taqiqlangan")
-
-        attrs["user"] = user
-        return attrs
+# class TeacherLoginSerializer(serializers.Serializer):
+#     username = serializers.CharField()
+#     password = serializers.CharField(write_only=True)
+#
+#     def validate(self, attrs):
+#         username = attrs.get("username")
+#         password = attrs.get("password")
+#
+#         user = authenticate(username=username, password=password)
+#
+#         if not user:
+#             raise serializers.ValidationError("Noto‘g‘ri username yoki parol")
+#
+#         allowed_roles = ["teacher", "admin"]
+#
+#         if (user.role not in allowed_roles) and (not user.is_superuser):
+#             raise serializers.ValidationError("Sizga teacher panelga kirish taqiqlangan")
+#
+#         attrs["user"] = user
+#         return attrs
 
 
 
