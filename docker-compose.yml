@@ -33,6 +33,7 @@ services:
       - ./listening:/app/listening
       - ./reading:/app/reading
       - ./writing:/app/writing
+      - ./media:/app/media
     environment:
       DEBUG: ${DEBUG:-True}
       SECRET_KEY: ${SECRET_KEY}
