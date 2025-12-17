@@ -406,9 +406,70 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
         return super().partial_update(request, *args, **kwargs)
 
     @extend_schema(
-        request=ListeningQuestionSerializer(many=True),
+        request={
+            'application/json': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'section': {
+                            'type': 'integer',
+                            'description': 'Section ID'
+                        },
+                        'question_number': {
+                            'type': 'integer',
+                            'description': 'Savol raqami'
+                        },
+                        'question_text': {
+                            'type': 'string',
+                            'description': 'Savol matni'
+                        },
+                        'question_type': {
+                            'type': 'string',
+                            'enum': ['multiple_choice', 'completion', 'matching', 'table'],
+                            'description': 'Savol turi'
+                        },
+                        'question_data': {
+                            'type': 'object',
+                            'description': 'Savolga oid qo\'shimcha ma\'lumotlar',
+                            'example': {"options": ["A) Economy", "B) Technology"]}
+                        },
+                        'correct_answer': {
+                            'type': 'string',
+                            'description': 'To\'g\'ri javob'
+                        }
+                    },
+                    'required': ['section', 'question_number', 'question_type']
+                },
+                'example': [
+                    {
+                        "section": 1,
+                        "question_number": 1,
+                        "question_text": "What is the main topic?",
+                        "question_type": "multiple_choice",
+                        "question_data": {"options": ["A) Economy", "B) Technology"]},
+                    },
+                    {
+                        "section": 1,
+                        "question_number": 2,
+                        "question_text": "Complete: The speaker mentions ___",
+                        "question_type": "completion",
+                        "question_data": {},
+                    }
+                ]
+            }
+        },
         responses={
-            201: ListeningQuestionSerializer(many=True),
+            201: {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string'},
+                    'data': {
+                        'type': 'array',
+                        'items': {'$ref': '#/components/schemas/ListeningQuestion'}
+                    }
+                }
+            },
             400: OpenApiTypes.OBJECT
         },
         parameters=[
@@ -422,27 +483,7 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
         ],
         description="""
         Create multiple listening questions at once.
-
-        Example request body:
-        [
-            {
-                "section": 1,
-                "question_number": 1,
-                "question_text": "What is the main topic?",
-                "question_type": "multiple_choice",
-                "question_data": {"options": ["A) Economy", "B) Technology"]},
-                "correct_answer": "B"
-            },
-            {
-                "section": 1,
-                "question_number": 2,
-                "question_text": "Complete: The speaker mentions ___",
-                "question_type": "completion",
-                "question_data": {},
-                # "correct_answer": "renewable energy"
-            }
-        ]
-
+        Send an array of question objects.
         Optional: Add ?test_id=X to validate all sections belong to test X
         """
     )
