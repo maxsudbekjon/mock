@@ -31,7 +31,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = True
 
 # ALLOWED_HOSTS = ['*']    # localda
-ALLOWED_HOSTS = ['95.217.166.224', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['95.217.166.224', 'localhost', '127.0.0.1', '95.217.166.224:8010']
 
 
 CSRF_TRUSTED_ORIGINS = [
@@ -42,6 +42,8 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = True  # Development uchun
 CORS_ALLOW_CREDENTIALS = True
 
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 # Application definition
 
