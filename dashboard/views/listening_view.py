@@ -261,68 +261,397 @@ class ListeningSectionViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-@extend_schema(tags=['Listening question'])
+@extend_schema(tags=['Listening Question'])
 class ListeningQuestionViewSet(viewsets.ModelViewSet):
     """
-    Savollar bilan ishlash.
-    Features:
-    - Test ID bo'yicha filterlash (GET /questions/?test_id=1)
-    - Section ID bo'yicha filterlash (GET /questions/?section_id=5)
-    - Bulk Create (Tranzaksiya bilan)
+    ViewSet for managing Listening Questions
+
+    Teachers/Admin: Full CRUD access
     """
-    queryset = ListeningQuestion.objects.all().select_related('section', 'section__test')
     serializer_class = ListeningQuestionSerializer
     permission_classes = [IsTeacherOrAdminOrReadOnly]
+    parser_classes = [parsers.MultiPartParser, parsers.JSONParser]
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['section', 'section__test']
-    ordering_fields = ['question_number']
+    filterset_fields = ['section', 'section__test', 'question_type']
+    ordering_fields = ['question_number', 'created_at']
+    ordering = ['question_number']
+
+    def get_queryset(self):
+        """Optimized queryset with select_related"""
+        return ListeningQuestion.objects.select_related('section', 'section__test')
 
     @extend_schema(
-        summary="Ko'p savollarni bittada yaratish (Bulk Create)",
-        description="""
-        JSON Array ko'rinishida savollarni yuboring. 
-        Mantiqiy bog'liqlik: Savol Sectionga ulanadi, Section esa Testga. 
-        Shuning uchun Section ID to'g'ri bo'lsa, Testga avtomatik bog'lanadi.
+        parameters=[
+            OpenApiParameter(
+                name='section',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Filter questions by section ID',
+                required=False
+            ),
+            OpenApiParameter(
+                name='section__test',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Filter questions by test ID',
+                required=False
+            ),
+            OpenApiParameter(
+                name='question_type',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Filter by question type',
+                required=False,
+                enum=['multiple_choice', 'completion', 'matching', 'table']
+            )
+        ],
+        description='List all listening questions with optional filtering'
+    )
+    def list(self, request, *args, **kwargs):
+        """List all questions with optional filtering"""
+        return super().list(request, *args, **kwargs)
 
-        Qo'llab-quvvatlanadigan question typelar:
+    @extend_schema(
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'section': {'type': 'integer'},
+                    'question_number': {'type': 'integer'},
+                    'question_text': {'type': 'string'},
+                    'question_type': {
+                        'type': 'string',
+                        'enum': ['multiple_choice', 'completion', 'matching', 'table']
+                    },
+                    'question_data': {'type': 'object'},
+                    'question_image': {'type': 'string', 'format': 'binary'},
+                    # 'correct_answer': {'type': 'string'},
+                },
+                'required': ['section', 'question_number', 'question_type']
+            }
+        },
+        responses={
+            201: ListeningQuestionSerializer,
+            400: OpenApiTypes.OBJECT
+        },
+        description="""
+        Create a single listening question.
+
+        Supported question types:
         - multiple_choice: question_data = {"options": ["A) ...", "B) ..."]}
-        - completion: question_data = {"word_limit": 2} (ixtiyoriy)
+        - completion: question_data = {"word_limit": 2} (optional)
         - matching: question_data = {"left": [...], "right": [...]}
-        - table: question_data = {"headers": [...], "rows": [[...]]}
-        """,
+        - table: question_data = {"headers": [...], "rows": [...]} OR question_image
+
+        Note: correct_answer can be a string or JSON object
+        """
+    )
+    def create(self, request, *args, **kwargs):
+        """Create a single question"""
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'section': {'type': 'integer'},
+                    'question_number': {'type': 'integer'},
+                    'question_text': {'type': 'string'},
+                    'question_type': {
+                        'type': 'string',
+                        'enum': ['multiple_choice', 'completion', 'matching', 'table']
+                    },
+                    'question_data': {'type': 'object'},
+                    'question_image': {'type': 'string', 'format': 'binary'},
+                    # 'correct_answer': {'type': 'object'},
+                }
+            }
+        },
+        responses={
+            200: ListeningQuestionSerializer,
+            400: OpenApiTypes.OBJECT
+        }
+    )
+    def update(self, request, *args, **kwargs):
+        """Update a question (full update)"""
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'section': {'type': 'integer'},
+                    'question_number': {'type': 'integer'},
+                    'question_text': {'type': 'string'},
+                    'question_type': {
+                        'type': 'string',
+                        'enum': ['multiple_choice', 'completion', 'matching', 'table']
+                    },
+                    'question_data': {'type': 'object'},
+                    'question_image': {'type': 'string', 'format': 'binary'},
+                    # 'correct_answer': {'type': 'object'},
+                }
+            }
+        },
+        responses={
+            200: ListeningQuestionSerializer,
+            400: OpenApiTypes.OBJECT
+        }
+    )
+    def partial_update(self, request, *args, **kwargs):
+        """Update a question (partial update)"""
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
         request=ListeningQuestionSerializer(many=True),
-        responses={201: ListeningQuestionSerializer(many=True)}
+        responses={
+            201: ListeningQuestionSerializer(many=True),
+            400: OpenApiTypes.OBJECT
+        },
+        parameters=[
+            OpenApiParameter(
+                name='test_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='All questions must belong to sections of this test',
+                required=False
+            )
+        ],
+        description="""
+        Create multiple listening questions at once.
+
+        Example request body:
+        [
+            {
+                "section": 1,
+                "question_number": 1,
+                "question_text": "What is the main topic?",
+                "question_type": "multiple_choice",
+                "question_data": {"options": ["A) Economy", "B) Technology"]},
+                "correct_answer": "B"
+            },
+            {
+                "section": 1,
+                "question_number": 2,
+                "question_text": "Complete: The speaker mentions ___",
+                "question_type": "completion",
+                "question_data": {},
+                # "correct_answer": "renewable energy"
+            }
+        ]
+
+        Optional: Add ?test_id=X to validate all sections belong to test X
+        """
     )
     @action(detail=False, methods=['post'], url_path='bulk-create')
     def bulk_create(self, request):
-        """Bir nechta savollarni bittada yaratish"""
-        serializer = self.get_serializer(data=request.data, many=True)
-        serializer.is_valid(raise_exception=True)
+        """Create multiple questions at once"""
+        # 1. List formatini tekshirish
+        if not isinstance(request.data, list):
+            return Response(
+                {"error": "Ma'lumot list formatida bo'lishi kerak"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # Test ID bo'yicha validation
+        if not request.data:
+            return Response(
+                {"error": "Bo'sh list yuborish mumkin emas"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 2. Serializer validation
+        serializer = self.get_serializer(data=request.data, many=True)
+
+        if not serializer.is_valid():
+            return Response(
+                {"error": "Validation xatosi", "details": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 3. test_id parametrini olish
         target_test_id = request.query_params.get('test_id')
+
+        # 4. Section validatsiyasi
+        section_ids = {item['section'].id for item in serializer.validated_data}
+
         if target_test_id:
-            section_ids = {item['section'].id for item in serializer.validated_data}
+            # test_id ko'rsatilgan bo'lsa
+            try:
+                target_test_id = int(target_test_id)
+            except ValueError:
+                return Response(
+                    {"error": "test_id raqam bo'lishi kerak"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
             valid_sections = ListeningSection.objects.filter(
                 id__in=section_ids,
                 test_id=target_test_id
-            ).count()
+            ).values_list('id', flat=True)
 
-            if valid_sections != len(section_ids):
+            if set(valid_sections) != section_ids:
+                invalid_sections = section_ids - set(valid_sections)
                 return Response(
-                    {"error": "Barcha savollar ko'rsatilgan Test ID ga tegishli sectionlarga biriktirilishi shart!"},
+                    {
+                        "error": f"Barcha savollar test_id={target_test_id} ga tegishli bo'lishi kerak",
+                        "invalid_section_ids": list(invalid_sections)
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            # test_id ko'rsatilmagan bo'lsa - section mavjudligini tekshirish
+            existing_sections = ListeningSection.objects.filter(
+                id__in=section_ids
+            ).values_list('id', flat=True)
+
+            if set(existing_sections) != section_ids:
+                missing_sections = section_ids - set(existing_sections)
+                return Response(
+                    {
+                        "error": "Ba'zi section ID lar mavjud emas",
+                        "missing_section_ids": list(missing_sections)
+                    },
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+        # 5. Duplicate question_number tekshirish
+        section_question_numbers = {}
+        for item in serializer.validated_data:
+            section_id = item['section'].id
+            question_num = item['question_number']
+
+            if section_id not in section_question_numbers:
+                section_question_numbers[section_id] = []
+
+            if question_num in section_question_numbers[section_id]:
+                return Response(
+                    {
+                        "error": f"Section {section_id} da {question_num} raqamli savol takrorlanmoqda",
+                        "section_id": section_id,
+                        "duplicate_question_number": question_num
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            section_question_numbers[section_id].append(question_num)
+
+        # 6. Mavjud question_number lar bilan konflikt tekshirish
+        for section_id, question_numbers in section_question_numbers.items():
+            existing_questions = ListeningQuestion.objects.filter(
+                section_id=section_id,
+                question_number__in=question_numbers
+            ).values_list('question_number', flat=True)
+
+            if existing_questions:
+                return Response(
+                    {
+                        "error": f"Section {section_id} da ushbu raqamli savollar allaqachon mavjud",
+                        "section_id": section_id,
+                        "existing_question_numbers": list(existing_questions)
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # 7. Saqlash
         try:
             with transaction.atomic():
-                self.perform_create(serializer)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                questions = serializer.save()
+                response_serializer = self.get_serializer(questions, many=True)
+
+                return Response(
+                    {
+                        "message": f"{len(questions)} ta savol muvaffaqiyatli yaratildi",
+                        "data": response_serializer.data
+                    },
+                    status=status.HTTP_201_CREATED
+                )
+
         except Exception as e:
             return Response(
-                {"error": f"Saqlashda xatolik: {str(e)}"},
+                {"error": "Saqlashda xatolik yuz berdi", "details": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @extend_schema(
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'ids': {
+                        'type': 'array',
+                        'items': {'type': 'integer'},
+                        'description': 'O\'chiriladigan savol ID lari'
+                    }
+                },
+                'required': ['ids']
+            }
+        },
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string'},
+                    'deleted_count': {'type': 'integer'}
+                }
+            },
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT
+        },
+        description='Bir nechta savolni bir vaqtning o\'zida o\'chirish'
+    )
+    @action(detail=False, methods=['post'], url_path='bulk-delete')
+    def bulk_delete(self, request):
+        """Delete multiple questions at once"""
+        ids = request.data.get('ids', [])
+
+        # Validatsiya
+        if not isinstance(ids, list):
+            return Response(
+                {"error": "'ids' list formatida bo'lishi kerak"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not ids:
+            return Response(
+                {"error": "'ids' bo'sh bo'lmasligi kerak"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Barcha ID lar integer ekanligini tekshirish
+        if not all(isinstance(id, int) for id in ids):
+            return Response(
+                {"error": "Barcha ID lar raqam bo'lishi kerak"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            with transaction.atomic():
+                # Mavjudligini tekshirish
+                existing_count = ListeningQuestion.objects.filter(id__in=ids).count()
+
+                if existing_count == 0:
+                    return Response(
+                        {"error": "Hech qanday savol topilmadi"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                # O'chirish
+                deleted_count, _ = ListeningQuestion.objects.filter(id__in=ids).delete()
+
+                return Response(
+                    {
+                        "message": f"{deleted_count} ta savol muvaffaqiyatli o'chirildi",
+                        "deleted_count": deleted_count
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+        except Exception as e:
+            return Response(
+                {"error": "O'chirishda xatolik yuz berdi", "details": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 

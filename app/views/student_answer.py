@@ -92,7 +92,7 @@ class ListeningSubmissionViewSet(viewsets.ViewSet):
             'attempt_id': attempt.id,
             'time_limit': time_limit,
             'audio_duration': total_audio_duration,
-            'extra_time': 600,
+            'extra_time': 300,
             'started_at': attempt.listening_started_at,
         })
 

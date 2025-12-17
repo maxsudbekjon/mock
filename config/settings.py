@@ -202,6 +202,10 @@ SPECTACULAR_SETTINGS = {
 }
 
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
 
 
 SIMPLE_JWT = {

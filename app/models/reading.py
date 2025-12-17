@@ -67,6 +67,7 @@ class ReadingQuestion(models.Model):
 
     # To'g'ri javob - barcha typelar uchun BITTA field
     correct_answer = models.JSONField(
+        null=True, blank=True,
         help_text="""
         Multiple Choice: "A"
         True/False: "True" or "False" or "Not Given"
