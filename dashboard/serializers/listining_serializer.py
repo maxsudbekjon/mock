@@ -72,30 +72,7 @@ class ListeningQuestionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Question number musbat son bo\'lishi kerak')
         return value
 
-# class ListeningQuestionSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = ListeningQuestion
-#         fields = [
-#             'id', 'section', 'question_number', 'question_text',
-#             'question_type', 'options', 'correct_answer', 'points'
-#         ]
-#         extra_kwargs = {
-#             'section': {'required': True}
-#         }
-#
-#     def validate(self, data):
-#         """
-#         Modeldagi clean() metodiga o'xshash validatsiya.
-#         Agar type='options' bo'lsa, options maydoni bo'sh bo'lmasligi kerak.
-#         """
-#         question_type = data.get('question_type')
-#         options = data.get('options')
-#
-#         if question_type == 'options' and not options:
-#             raise serializers.ValidationError(
-#                 {"options": "Multiple Choice savollari uchun variantlar kiritilishi shart."}
-#             )
-#         return data
+
 
 
 class ListeningSectionSerializer(serializers.ModelSerializer):

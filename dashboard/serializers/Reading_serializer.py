@@ -1,4 +1,3 @@
-# serializers.py
 
 from rest_framework import serializers
 from app.models import ReadingPassage, ReadingQuestion, Test
@@ -11,6 +10,31 @@ class TestBasicSerializer(serializers.ModelSerializer):
         model = Test
         fields = ['id', 'title']
         read_only_fields = fields
+
+
+
+class ReadingQuestionListSerializer(serializers.ModelSerializer):
+    """
+    O'quvchilar uchun - correct_answer ni yashirish
+    """
+    # options = serializers.ReadOnlyField()
+    # matching_items = serializers.ReadOnlyField()
+    # word_limit = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ReadingQuestion
+        fields = [
+            'id',
+            'question_number',
+            'question_text',
+            'question_type',
+            'question_data'
+            # 'points',
+            # Helper fields
+            # 'options',
+            # 'matching_items',
+            # 'word_limit',
+        ]
 
 
 class ReadingQuestionSerializer(serializers.ModelSerializer):
@@ -67,89 +91,6 @@ class ReadingQuestionSerializer(serializers.ModelSerializer):
                 })
 
         return data
-
-
-class ReadingQuestionListSerializer(serializers.ModelSerializer):
-    """
-    O'quvchilar uchun - correct_answer ni yashirish
-    """
-    options = serializers.ReadOnlyField()
-    matching_items = serializers.ReadOnlyField()
-    word_limit = serializers.ReadOnlyField()
-
-    class Meta:
-        model = ReadingQuestion
-        fields = [
-            'id',
-            'question_number',
-            'question_text',
-            'question_type',
-            # 'points',
-            # Helper fields
-            'options',
-            'matching_items',
-            'word_limit',
-        ]
-
-
-# class ReadingQuestionSerializer(serializers.ModelSerializer):
-#     """Reading Question Serializer - for teachers"""
-#
-#     class Meta:
-#         model = ReadingQuestion
-#         fields = [
-#             'id',
-#             'passage',
-#             'question_number',
-#             'question_text',
-#             'question_type',
-#             'options',
-#             'correct_answer',
-#             # 'points',
-#             # 'explanation'
-#         ]
-#         read_only_fields = ['id']
-#
-#     def validate(self, data):
-#         """
-#         Modeldagi clean() metodiga o'xshash validatsiya.
-#         Agar type='options' bo'lsa, options maydoni bo'sh bo'lmasligi kerak.
-#         """
-#         question_type = data.get('question_type')
-#         options = data.get('options')
-#
-#         if question_type == 'options' and not options:
-#             raise serializers.ValidationError(
-#                 {"options": "Multiple Choice savollari uchun variantlar kiritilishi shart."}
-#             )
-#         return data
-#
-#     def validate(self, attrs):
-#         """Cross-field validation"""
-#         question_type = attrs.get('question_type')
-#         options = attrs.get('options')
-#
-#         if question_type == 'options' and not options:
-#             raise serializers.ValidationError({
-#                 'options': 'Options are required for multiple choice questions'
-#             })
-#
-#         return attrs
-#
-#
-# class ReadingQuestionListSerializer(serializers.ModelSerializer):
-#     """Simplified serializer for listing questions (for students)"""
-#
-#     class Meta:
-#         model = ReadingQuestion
-#         fields = [
-#             'id',
-#             'question_number',
-#             'question_text',
-#             'question_type',
-#             'options',
-#             # 'points'
-#         ]
 
 
 class ReadingPassageSerializer(serializers.ModelSerializer):
@@ -247,11 +188,39 @@ class ReadingPassageListSerializer(serializers.ModelSerializer):
         return obj.questions.count()
 
 
+
+class ReadingPassageWithQuestionsSerializer(serializers.ModelSerializer):
+    """Passage va uning savollari"""
+    questions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReadingPassage
+        fields = [
+            'id',
+            'passage_number',
+            'title',
+            'passage_text',
+            'word_count',
+            'questions'
+        ]
+
+    def get_questions(self, obj):
+        """Foydalanuvchi roliga qarab javob bilan yoki javobsiz qaytarish"""
+        questions = obj.questions.all().order_by('question_number')
+        request = self.context.get('request')
+
+        if request and hasattr(request, 'user'):
+            if request.user.role in ['teacher', 'admin']:
+                return ReadingQuestionSerializer(questions, many=True).data
+
+        return ReadingQuestionListSerializer(questions, many=True).data
+
+
 class TestReadingOverviewSerializer(serializers.ModelSerializer):
-    """Serializer to show reading passages for a test"""
-    reading_passages = ReadingPassageListSerializer(many=True, read_only=True)
+    """Test va barcha passagelar + savollar"""
+    reading_passages = ReadingPassageWithQuestionsSerializer(many=True, read_only=True)
     total_passages = serializers.SerializerMethodField()
-    total_reading_questions = serializers.SerializerMethodField()
+    total_questions = serializers.SerializerMethodField()
 
     class Meta:
         model = Test
@@ -259,15 +228,73 @@ class TestReadingOverviewSerializer(serializers.ModelSerializer):
             'id',
             'title',
             'total_passages',
-            'total_reading_questions',
+            'total_questions',
             'reading_passages'
         ]
 
     def get_total_passages(self, obj):
         return obj.reading_passages.count()
 
-    def get_total_reading_questions(self, obj):
-        total = 0
-        for passage in obj.reading_passages.all():
-            total += passage.questions.count()
-        return total
+    def get_total_questions(self, obj):
+        return ReadingQuestion.objects.filter(passage__test=obj).count()
+
+
+
+
+
+
+class ReadingPassagesListSerializer(serializers.ModelSerializer):
+    """Simplified serializer for listing passages"""
+    questions_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReadingPassage
+        fields = [
+            'id',
+            'passage_number',
+            'title',
+            'passage_text',
+            'word_count',
+            'questions_count'
+        ]
+
+    def get_questions_count(self, obj):
+        return obj.questions.count()
+
+
+
+
+
+class ReadingPassageTestSerializer(serializers.ModelSerializer):
+    """
+    Test ma'lumoti va undagi barcha passagelar
+    """
+    reading_passages = ReadingPassagesListSerializer(many=True, read_only=True)
+    passages_count = serializers.SerializerMethodField()
+    total_questions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Test
+        fields = [
+            'id',
+            'title',
+            'description',  # agar Test modelida bo'lsa
+            'passages_count',
+            'total_questions',
+            'reading_passages',
+        ]
+
+    def get_passages_count(self, obj):
+        """Nechta passage bor"""
+        return obj.reading_passages.count()
+
+    def get_total_questions(self, obj):
+        """Jami nechta savol bor (barcha passagelar bo'yicha)"""
+        return sum(passage.questions.count() for passage in obj.reading_passages.all())
+
+
+
+
+
+
+
