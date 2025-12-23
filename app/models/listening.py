@@ -110,11 +110,11 @@ class ListeningQuestion(models.Model):
         on_delete=models.CASCADE,
         related_name='questions'
     )
-    question_number = models.IntegerField()
+
+    question_number = models.IntegerField(blank=True, null=True)
     question_text = models.TextField()
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
 
-    # Barcha qo'shimcha ma'lumotlar shu fieldda
     question_data = models.JSONField(
         blank=True,
         null=True,
@@ -126,24 +126,12 @@ class ListeningQuestion(models.Model):
         """
     )
 
-    # Rasm - barcha typelar uchun
     question_image = models.ImageField(
         upload_to='listening/questions/',
         blank=True,
         null=True,
         help_text='Table/Map/Diagram uchun rasm, qolganlariga ixtiyoriy'
     )
-
-    # To'g'ri javob - barcha typelar uchun bitta field
-    # correct_answer = models.JSONField(
-    #     null=True, blank=True,
-    #     help_text="""
-    #     Multiple Choice: "A"
-    #     Completion: "London" or ["word1", "word2"]
-    #     Matching: {"1": "B", "2": "A"}
-    #     Table: {"0-0": "Alice", "1-1": "30"}
-    #     """
-    # )
 
     points = models.IntegerField(default=1)
 
@@ -154,6 +142,21 @@ class ListeningQuestion(models.Model):
 
     def __str__(self):
         return f"Q{self.question_number} ({self.get_question_type_display()})"
+
+    def save(self, *args, **kwargs):
+        """question_number ni avtomatik hisoblaydigan"""
+        if self.question_number is None:
+            # Shu sectiondagi oxirgi raqamni topish
+            last_question = ListeningQuestion.objects.filter(
+                section=self.section
+            ).order_by('-question_number').first()
+
+            if last_question and last_question.question_number:
+                self.question_number = last_question.question_number + 1
+            else:
+                self.question_number = 1
+
+        super().save(*args, **kwargs)
 
     def clean(self):
         """Validation"""
@@ -170,7 +173,6 @@ class ListeningQuestion(models.Model):
                 })
 
         elif self.question_type == 'table':
-            # Table uchun question_data YOKI question_image bo'lishi kerak
             has_data = self.question_data and 'headers' in self.question_data and 'rows' in self.question_data
             has_image = bool(self.question_image)
 
@@ -198,11 +200,15 @@ class ListeningQuestion(models.Model):
 
     @property
     def table_structure(self):
-        """Table structure - faqat interactive table uchun"""
+        """Table structure - xatolikni oldini olish uchun"""
         if self.question_type == 'table' and self.question_data:
+            headers = self.question_data.get('headers', [])
+            rows = self.question_data.get('rows', [])
+
+            # None bo'lsa bo'sh list qaytarish
             return {
-                'headers': self.question_data.get('headers', []),
-                'rows': self.question_data.get('rows', [])
+                'headers': headers if headers is not None else [],
+                'rows': rows if rows is not None else []
             }
         return {'headers': [], 'rows': []}
 
@@ -214,190 +220,4 @@ class ListeningQuestion(models.Model):
         return None
 
 
-# class ListeningQuestion(models.Model):
-#     """Listening section savollari"""
-#
-#     QUESTION_TYPE_CHOICES = [
-#         ('multiple_choice', 'Multiple Choice'),
-#         ('completion', 'Completion'),
-#         ('matching', 'Matching'),
-#         ('table', 'Table Completion'),
-#     ]
-#
-#     section = models.ForeignKey(
-#         'ListeningSection',
-#         on_delete=models.CASCADE,
-#         related_name='questions'
-#     )
-#     question_number = models.IntegerField()
-#     question_text = models.TextField()
-#     question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
-#
-#     # Barcha qo'shimcha ma'lumotlar shu fieldda
-#     question_data = models.JSONField(
-#         blank=True,
-#         null=True,
-#         help_text="""
-#         Multiple Choice: {"options": ["A) London", "B) Paris"]}
-#         Matching: {"left": ["1. Dog"], "right": ["A. Barks"]}
-#         Table: {"headers": ["Name"], "rows": [["___"]]}
-#         Completion: {"word_limit": 2} or {}
-#         """
-#     )
-#     question_image = models.ImageField(
-#         upload_to='listening/table_questions/',
-#         blank=True,
-#         null=True,
-#         help_text=' Table Completion savollar uchun rasm qolganlariga ixtiyoriy'
-#     )
-#
-#     # To'g'ri javob - barcha typelar uchun bitta field
-#     correct_answer = models.JSONField(
-#         help_text="""
-#         Multiple Choice: "A"
-#         Completion: "London" or ["word1", "word2"]
-#         Matching: {"1": "B", "2": "A"}
-#         Table: {"0-0": "Alice", "1-1": "30"}
-#         """
-#     )
-#
-#     points = models.IntegerField(default=1)
-#
-#     class Meta:
-#         db_table = 'listening_questions'
-#         ordering = ['question_number']
-#         unique_together = ['section', 'question_number']
-#
-#     def __str__(self):
-#         return f"Q{self.question_number} ({self.get_question_type_display()})"
-#
-#     def clean(self):
-#         """Validation"""
-#         if self.question_type == 'multiple_choice':
-#             if not self.question_data or 'options' not in self.question_data:
-#                 raise ValidationError({
-#                     'question_data': 'Multiple choice uchun "options" kerak'
-#                 })
-#
-#         elif self.question_type == 'matching':
-#             if not self.question_data or 'left' not in self.question_data or 'right' not in self.question_data:
-#                 raise ValidationError({
-#                     'question_data': 'Matching uchun "left" va "right" kerak'
-#                 })
-#
-#         elif self.question_type == 'table':
-#             if not self.question_data or 'headers' not in self.question_data or 'rows' not in self.question_data:
-#                 raise ValidationError({
-#                     'question_data': 'Table uchun "headers" va "rows" kerak'
-#                 })
-#
-#     # def check_answer(self, user_answer):
-#     #     """Javobni tekshirish"""
-#     #     import re
-#     #
-#     #     if self.question_type == 'multiple_choice':
-#     #         return str(user_answer).strip().upper() == str(self.correct_answer).strip().upper()
-#     #
-#     #     elif self.question_type == 'completion':
-#     #         def normalize(text):
-#     #             return re.sub(r'[^\w\s]', '', str(text).lower()).strip()
-#     #
-#     #         if isinstance(self.correct_answer, list):
-#     #             if not isinstance(user_answer, list):
-#     #                 return False
-#     #             return all(normalize(ua) == normalize(ca) for ua, ca in zip(user_answer, self.correct_answer))
-#     #
-#     #         return normalize(user_answer) == normalize(self.correct_answer)
-#     #
-#     #     elif self.question_type == 'matching':
-#     #         return isinstance(user_answer, dict) and user_answer == self.correct_answer
-#     #
-#     #     elif self.question_type == 'table':
-#     #         if not isinstance(user_answer, dict):
-#     #             return False
-#     #
-#     #         def normalize(text):
-#     #             return re.sub(r'[^\w\s]', '', str(text).lower()).strip()
-#     #
-#     #         for key, correct_val in self.correct_answer.items():
-#     #             if normalize(user_answer.get(key, '')) != normalize(correct_val):
-#     #                 return False
-#     #         return True
-#     #
-#     #     return False
-#
-#     @property
-#     def options(self):
-#         """Multiple choice options"""
-#         if self.question_type == 'multiple_choice' and self.question_data:
-#             return self.question_data.get('options', [])
-#         return []
-#
-#     @property
-#     def matching_pairs(self):
-#         """Matching pairs"""
-#         if self.question_type == 'matching' and self.question_data:
-#             return {
-#                 'left': self.question_data.get('left', []),
-#                 'right': self.question_data.get('right', [])
-#             }
-#         return {'left': [], 'right': []}
-#
-#     @property
-#     def table_structure(self):
-#         """Table structure"""
-#         if self.question_type == 'table' and self.question_data:
-#             return {
-#                 'headers': self.question_data.get('headers', []),
-#                 'rows': self.question_data.get('rows', [])
-#             }
-#         return {'headers': [], 'rows': []}
-#
-#     @property
-#     def word_limit(self):
-#         """Word limit for completion"""
-#         if self.question_type == 'completion' and self.question_data:
-#             return self.question_data.get('word_limit')
-#         return None
-
-
-# class ListeningQuestion(models.Model):
-#     """Listening section savollari"""
-#
-#     QUESTION_TYPE_CHOICES = [
-#         ('multiple_choice', 'Multiple Choice'),
-#         ('completion', 'Completion'),
-#         ('matching', 'Matching'),
-#         ('table', 'Table Completion'),
-#     ]
-#
-#     section = models.ForeignKey(ListeningSection, on_delete=models.CASCADE, related_name='questions')
-#     question_number = models.IntegerField()
-#
-#     question_text = models.TextField()
-#     question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
-#
-#     # Options (faqat 'options' type uchun)
-#     # Example: ["A) London", "B) Paris", "C) Berlin", "D) Rome"]
-#     options = models.JSONField(blank=True, null=True, help_text="Required for 'options' type")
-#
-#     correct_answer = models.CharField(max_length=255)
-#     points = models.IntegerField(default=1)
-#
-#     # Metadata
-#     # explanation = models.TextField(blank=True, help_text="Answer explanation for students")
-#
-#     class Meta:
-#         db_table = 'listening_questions'
-#         ordering = ['question_number']
-#         unique_together = ['section', 'question_number']
-#
-#     def __str__(self):
-#         return f"Q{self.question_number}: {self.question_text[:50]}"
-#
-#     def clean(self):
-#         """Validate that options are provided for 'options' type"""
-#         from django.core.exceptions import ValidationError
-#         if self.question_type == 'options' and not self.options:
-#             raise ValidationError("Options are required for multiple choice questions")
 

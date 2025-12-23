@@ -23,10 +23,10 @@ class ListeningQuestionSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             'section': {'required': True},
-            'question_number': {'required': True},
             'question_type': {'required': True},
             # 'correct_answer': {'write_only': True},  # Foydalanuvchiga ko'rsatmaslik
         }
+        read_only_fields = ['question_number','id']
 
     def validate(self, data):
         """Validation - model.clean() ga o'xshash"""
@@ -66,11 +66,11 @@ class ListeningQuestionSerializer(serializers.ModelSerializer):
 
         return data
 
-    def validate_question_number(self, value):
-        """question_number musbat son bo'lishi kerak"""
-        if value <= 0:
-            raise serializers.ValidationError('Question number musbat son bo\'lishi kerak')
-        return value
+    # def validate_question_number(self, value):
+    #     """question_number musbat son bo'lishi kerak"""
+    #     if value <= 0:
+    #         raise serializers.ValidationError('Question number musbat son bo\'lishi kerak')
+    #     return value
 
 
 

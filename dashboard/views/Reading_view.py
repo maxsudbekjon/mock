@@ -147,6 +147,7 @@ class ReadingPassageViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+
 @extend_schema(tags=['Reading question'])
 class ReadingQuestionViewSet(viewsets.ModelViewSet):
     """
@@ -235,7 +236,6 @@ class ReadingQuestionViewSet(viewsets.ModelViewSet):
         [
             {
                 "passage": 1,
-                "question_number": 1,
                 "question_text": "What is the main idea?",
                 "question_type": "multiple_choice",
                 "question_data": {"options": ["A) Economy", "B) Technology"]},
@@ -244,7 +244,6 @@ class ReadingQuestionViewSet(viewsets.ModelViewSet):
             },
             {
                 "passage": 1,
-                "question_number": 2,
                 "question_text": "The author supports renewable energy.",
                 "question_type": "true_false",
                 "question_data": {},

@@ -383,15 +383,12 @@ class WritingSubmissionViewSet(viewsets.ViewSet):
 
         test = get_object_or_404(Test, pk=test_id)
 
-        # ✅ YECHIM: get_or_create ishlatish
         attempt, created = TestAttempt.objects.get_or_create(
             user=request.user,
             test=test,
             defaults={'status': 'in_progress'}
         )
-        # time_limit = WritingTask(test_id=test_id).time_suggestion
-        # print(time_limit)
-        # Writing allaqachon submitted bo'lsa
+
         if attempt.writing_submitted:
             return Response(
                 {'error': 'Writing allaqachon topshirilgan'},

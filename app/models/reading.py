@@ -48,11 +48,11 @@ class ReadingQuestion(models.Model):
     ]
 
     passage = models.ForeignKey('ReadingPassage', on_delete=models.CASCADE, related_name='questions')
-    question_number = models.IntegerField()
+    # question_number ni ixtiyoriy qilish
+    question_number = models.IntegerField(blank=True, null=True)
     question_text = models.TextField()
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
 
-    # Barcha qo'shimcha ma'lumotlar - BITTA field
     question_data = models.JSONField(
         blank=True,
         null=True,
@@ -65,7 +65,6 @@ class ReadingQuestion(models.Model):
         """
     )
 
-    # To'g'ri javob - barcha typelar uchun BITTA field
     correct_answer = models.JSONField(
         null=True, blank=True,
         help_text="""
@@ -88,6 +87,21 @@ class ReadingQuestion(models.Model):
     def __str__(self):
         return f"Q{self.question_number} ({self.get_question_type_display()})"
 
+    def save(self, *args, **kwargs):
+        """question_number ni avtomatik hisoblaydigan"""
+        if self.question_number is None:
+            # Shu passagedagi oxirgi raqamni topish
+            last_question = ReadingQuestion.objects.filter(
+                passage=self.passage
+            ).order_by('-question_number').first()
+
+            if last_question and last_question.question_number:
+                self.question_number = last_question.question_number + 1
+            else:
+                self.question_number = 1
+
+        super().save(*args, **kwargs)
+
     def clean(self):
         """Validation"""
         if self.question_type == 'multiple_choice':
@@ -102,43 +116,12 @@ class ReadingQuestion(models.Model):
                     'question_data': 'Matching uchun "items" kerak'
                 })
 
-    # def check_answer(self, user_answer):
-    #     """Javobni tekshirish"""
-    #     import re
-    #
-    #     if self.question_type == 'multiple_choice':
-    #         return str(user_answer).strip().upper() == str(self.correct_answer).strip().upper()
-    #
-    #     elif self.question_type in ['true_false', 'yes_no']:
-    #         return str(user_answer).strip().lower() == str(self.correct_answer).strip().lower()
-    #
-    #     elif self.question_type in ['completion', 'short_answer']:
-    #         def normalize(text):
-    #             return re.sub(r'[^\w\s]', '', str(text).lower()).strip()
-    #
-    #         # Agar list bo'lsa
-    #         if isinstance(self.correct_answer, list):
-    #             if not isinstance(user_answer, list):
-    #                 return False
-    #             return all(normalize(ua) == normalize(ca) for ua, ca in zip(user_answer, self.correct_answer))
-    #
-    #         return normalize(user_answer) == normalize(self.correct_answer)
-    #
-    #     elif self.question_type == 'matching':
-    #         if not isinstance(user_answer, dict):
-    #             return False
-    #         return user_answer == self.correct_answer
-    #
-    #     return False
-
-    # Helper properties
-
-
     @property
     def options(self):
-        """Multiple choice options"""
+        """Multiple choice options - NoneType xatoligini oldini olish"""
         if self.question_type == 'multiple_choice' and self.question_data:
-            return self.question_data.get('options', [])
+            options = self.question_data.get('options', [])
+            return options if options is not None else []
         elif self.question_type == 'true_false':
             return ['True', 'False', 'Not Given']
         elif self.question_type == 'yes_no':
@@ -147,11 +130,14 @@ class ReadingQuestion(models.Model):
 
     @property
     def matching_items(self):
-        """Matching items"""
+        """Matching items - NoneType xatoligini oldini olish"""
         if self.question_type == 'matching' and self.question_data:
+            items = self.question_data.get('items', [])
+            paragraphs = self.question_data.get('paragraphs', [])
+
             return {
-                'items': self.question_data.get('items', []),
-                'paragraphs': self.question_data.get('paragraphs', [])
+                'items': items if items is not None else [],
+                'paragraphs': paragraphs if paragraphs is not None else []
             }
         return {'items': [], 'paragraphs': []}
 
@@ -161,7 +147,6 @@ class ReadingQuestion(models.Model):
         if self.question_type in ['completion', 'short_answer'] and self.question_data:
             return self.question_data.get('word_limit')
         return None
-
 
 
 # class ReadingQuestion(models.Model):

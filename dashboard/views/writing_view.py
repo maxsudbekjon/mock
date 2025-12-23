@@ -74,15 +74,12 @@ class WritingTaskViewSet(viewsets.ModelViewSet):
                 'type': 'object',
                 'properties': {
                     'test': {'type': 'integer'},
-                    'task_number': {'type': 'integer'},
                     'task_type': {
                         'type': 'string',
                         'enum': ['TASK_1', 'TASK_2']  # ← DROPDOWN
                     },
                     'prompt_text': {'type': 'string'},
                     'image': {'type': 'string', 'format': 'binary'},
-                    'word_limit': {'type': 'integer'},
-                    'time_suggestion': {'type': 'integer'},
                 }
             }
         },
@@ -131,45 +128,7 @@ class WritingTaskViewSet(viewsets.ModelViewSet):
         """Writing task ni qisman yangilash"""
         return super().partial_update(request, *args, **kwargs)
 
-    # @extend_schema(
-    #     parameters=[
-    #         OpenApiParameter(
-    #             name='test_id',
-    #             type=OpenApiTypes.INT,
-    #             location=OpenApiParameter.QUERY,
-    #             description='Test ID to get its writing tasks',
-    #             required=True
-    #         )
-    #     ]
-    # )
-    # @action(detail=False, methods=['get'])
-    # def by_test(self, request):
-    #     """
-    #     Bitta testning barcha writing tasklarini olish
-    #
-    #     GET /writing-tasks/by_test/?test_id=5
-    #     """
-    #     test_id = request.query_params.get('test_id')
-    #
-    #     if not test_id:
-    #         return Response(
-    #             {'error': 'test_id parameter is required'},
-    #             status=status.HTTP_400_BAD_REQUEST
-    #         )
-    #
-    #     # Test mavjudligini tekshirish
-    #     test = get_object_or_404(Test, pk=test_id)
-    #
-    #     # Test ning barcha writing tasklarini olish
-    #     tasks = self.get_queryset().filter(test_id=test_id)
-    #     serializer = self.get_serializer(tasks, many=True)
-    #
-    #     return Response({
-    #         'test_id': test.id,
-    #         'test_title': test.title,
-    #         'total_tasks': tasks.count(),
-    #         'tasks': serializer.data
-    #     })
+
 
     @extend_schema(
         request=WritingTaskSerializer(many=True),

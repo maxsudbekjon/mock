@@ -318,7 +318,6 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
                 'type': 'object',
                 'properties': {
                     'section': {'type': 'integer'},
-                    'question_number': {'type': 'integer'},
                     'question_text': {'type': 'string'},
                     'question_type': {
                         'type': 'string',
@@ -328,7 +327,7 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
                     'question_image': {'type': 'string', 'format': 'binary'},
                     # 'correct_answer': {'type': 'string'},
                 },
-                'required': ['section', 'question_number', 'question_type']
+                'required': ['section', 'question_type']
             }
         },
         responses={

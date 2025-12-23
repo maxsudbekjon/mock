@@ -18,17 +18,13 @@ class WritingTaskSerializer(serializers.ModelSerializer):
             'prompt_text',
             'image',
             'instructions',
-            'word_limit',
-            'time_suggestion',
+            # 'word_limit',
+            # 'time_suggestion',
             'created_at'
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'task_number']
 
-    def validate_task_number(self, value):
-        """Task number 1 yoki 2 bo'lishi kerak"""
-        if value not in [1, 2]:
-            raise serializers.ValidationError("Task number must be 1 or 2")
-        return value
+
 
     def validate(self, data):
         """
@@ -67,8 +63,8 @@ class WritingTaskListSerializer(serializers.ModelSerializer):
             'prompt_text',
             'image',
             'instructions',
-            'word_limit',
-            'time_suggestion'
+            # 'word_limit',
+            # 'time_suggestion'
         ]
         read_only_fields = fields  # Barcha maydonlar faqat o'qish uchun
 
@@ -92,7 +88,7 @@ class WritingTaskDetailSerializer(serializers.ModelSerializer):
             'prompt_text',
             'image',
             'instructions',
-            'word_limit',
-            'time_suggestion',
+            # 'word_limit',
+            # 'time_suggestion',
             'created_at'
         ]

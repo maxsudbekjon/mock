@@ -57,13 +57,13 @@ class ReadingQuestionSerializer(serializers.ModelSerializer):
             'question_type',
             'question_data',
             'correct_answer',
-            'points',
+            # 'points',
             # Helper fields (read-only)
             # 'options',
             # 'matching_items',
             # 'word_limit',
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'question_number']
 
     def validate(self, data):
         """Validation - yangi model uchun"""
@@ -237,8 +237,6 @@ class TestReadingOverviewSerializer(serializers.ModelSerializer):
 
     def get_total_questions(self, obj):
         return ReadingQuestion.objects.filter(passage__test=obj).count()
-
-
 
 
 
