@@ -188,9 +188,12 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
             'id', 'test_title', 'student_name', 'status',
             'started_at', 'completed_at',
             'listening_band', 'reading_band', 'writing_band', 'overall_band',
-            'teacher_comment', 'graded_by_name', 'graded_at',
+            'teacher_comment', 'graded_by_name', 'graded_at','is_graded',
             'listening_answers', 'reading_answers', 'writing_submissions'
         ]
+
+        def get_is_graded(self, obj):
+            return obj.is_graded()
 
 
 class GradeAttemptSerializer(serializers.Serializer):

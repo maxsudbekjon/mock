@@ -240,7 +240,6 @@ class ReadingQuestionViewSet(viewsets.ModelViewSet):
                 "question_type": "multiple_choice",
                 "question_data": {"options": ["A) Economy", "B) Technology"]},
                 "correct_answer": "B",
-                "points": 1
             },
             {
                 "passage": 1,
@@ -248,7 +247,6 @@ class ReadingQuestionViewSet(viewsets.ModelViewSet):
                 "question_type": "true_false",
                 "question_data": {},
                 "correct_answer": "True",
-                "points": 1
             }
         ]
         """

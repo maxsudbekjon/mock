@@ -356,7 +356,7 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
                 'type': 'object',
                 'properties': {
                     'section': {'type': 'integer'},
-                    'question_number': {'type': 'integer'},
+                    # 'question_number': {'type': 'integer'},
                     'question_text': {'type': 'string'},
                     'question_type': {
                         'type': 'string',
@@ -383,7 +383,7 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
                 'type': 'object',
                 'properties': {
                     'section': {'type': 'integer'},
-                    'question_number': {'type': 'integer'},
+                    # 'question_number': {'type': 'integer'},
                     'question_text': {'type': 'string'},
                     'question_type': {
                         'type': 'string',
@@ -415,10 +415,7 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
                             'type': 'integer',
                             'description': 'Section ID'
                         },
-                        'question_number': {
-                            'type': 'integer',
-                            'description': 'Savol raqami'
-                        },
+
                         'question_text': {
                             'type': 'string',
                             'description': 'Savol matni'
@@ -438,19 +435,17 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
                             'description': 'To\'g\'ri javob'
                         }
                     },
-                    'required': ['section', 'question_number', 'question_type']
+                    'required': ['section', 'question_type']
                 },
                 'example': [
                     {
                         "section": 1,
-                        "question_number": 1,
                         "question_text": "What is the main topic?",
                         "question_type": "multiple_choice",
                         "question_data": {"options": ["A) Economy", "B) Technology"]},
                     },
                     {
                         "section": 1,
-                        "question_number": 2,
                         "question_text": "Complete: The speaker mentions ___",
                         "question_type": "completion",
                         "question_data": {},
@@ -615,84 +610,85 @@ class ListeningQuestionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @extend_schema(
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'ids': {
-                        'type': 'array',
-                        'items': {'type': 'integer'},
-                        'description': 'O\'chiriladigan savol ID lari'
-                    }
-                },
-                'required': ['ids']
-            }
-        },
-        responses={
-            200: {
-                'type': 'object',
-                'properties': {
-                    'message': {'type': 'string'},
-                    'deleted_count': {'type': 'integer'}
-                }
-            },
-            400: OpenApiTypes.OBJECT,
-            404: OpenApiTypes.OBJECT
-        },
-        description='Bir nechta savolni bir vaqtning o\'zida o\'chirish'
-    )
-    @action(detail=False, methods=['post'], url_path='bulk-delete')
-    def bulk_delete(self, request):
-        """Delete multiple questions at once"""
-        ids = request.data.get('ids', [])
 
-        # Validatsiya
-        if not isinstance(ids, list):
-            return Response(
-                {"error": "'ids' list formatida bo'lishi kerak"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if not ids:
-            return Response(
-                {"error": "'ids' bo'sh bo'lmasligi kerak"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Barcha ID lar integer ekanligini tekshirish
-        if not all(isinstance(id, int) for id in ids):
-            return Response(
-                {"error": "Barcha ID lar raqam bo'lishi kerak"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            with transaction.atomic():
-                # Mavjudligini tekshirish
-                existing_count = ListeningQuestion.objects.filter(id__in=ids).count()
-
-                if existing_count == 0:
-                    return Response(
-                        {"error": "Hech qanday savol topilmadi"},
-                        status=status.HTTP_404_NOT_FOUND
-                    )
-
-                # O'chirish
-                deleted_count, _ = ListeningQuestion.objects.filter(id__in=ids).delete()
-
-                return Response(
-                    {
-                        "message": f"{deleted_count} ta savol muvaffaqiyatli o'chirildi",
-                        "deleted_count": deleted_count
-                    },
-                    status=status.HTTP_200_OK
-                )
-
-        except Exception as e:
-            return Response(
-                {"error": "O'chirishda xatolik yuz berdi", "details": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    # @extend_schema(
+    #     request={
+    #         'application/json': {
+    #             'type': 'object',
+    #             'properties': {
+    #                 'ids': {
+    #                     'type': 'array',
+    #                     'items': {'type': 'integer'},
+    #                     'description': 'O\'chiriladigan savol ID lari'
+    #                 }
+    #             },
+    #             'required': ['ids']
+    #         }
+    #     },
+    #     responses={
+    #         200: {
+    #             'type': 'object',
+    #             'properties': {
+    #                 'message': {'type': 'string'},
+    #                 'deleted_count': {'type': 'integer'}
+    #             }
+    #         },
+    #         400: OpenApiTypes.OBJECT,
+    #         404: OpenApiTypes.OBJECT
+    #     },
+    #     description='Bir nechta savolni bir vaqtning o\'zida o\'chirish'
+    # )
+    # @action(detail=False, methods=['post'], url_path='bulk-delete')
+    # def bulk_delete(self, request):
+    #     """Delete multiple questions at once"""
+    #     ids = request.data.get('ids', [])
+    #
+    #     # Validatsiya
+    #     if not isinstance(ids, list):
+    #         return Response(
+    #             {"error": "'ids' list formatida bo'lishi kerak"},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+    #
+    #     if not ids:
+    #         return Response(
+    #             {"error": "'ids' bo'sh bo'lmasligi kerak"},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+    #
+    #     # Barcha ID lar integer ekanligini tekshirish
+    #     if not all(isinstance(id, int) for id in ids):
+    #         return Response(
+    #             {"error": "Barcha ID lar raqam bo'lishi kerak"},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+    #
+    #     try:
+    #         with transaction.atomic():
+    #             # Mavjudligini tekshirish
+    #             existing_count = ListeningQuestion.objects.filter(id__in=ids).count()
+    #
+    #             if existing_count == 0:
+    #                 return Response(
+    #                     {"error": "Hech qanday savol topilmadi"},
+    #                     status=status.HTTP_404_NOT_FOUND
+    #                 )
+    #
+    #             # O'chirish
+    #             deleted_count, _ = ListeningQuestion.objects.filter(id__in=ids).delete()
+    #
+    #             return Response(
+    #                 {
+    #                     "message": f"{deleted_count} ta savol muvaffaqiyatli o'chirildi",
+    #                     "deleted_count": deleted_count
+    #                 },
+    #                 status=status.HTTP_200_OK
+    #             )
+    #
+    #     except Exception as e:
+    #         return Response(
+    #             {"error": "O'chirishda xatolik yuz berdi", "details": str(e)},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
 
 
