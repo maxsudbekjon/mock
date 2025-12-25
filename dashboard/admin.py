@@ -43,209 +43,65 @@ class WritingSubmissionInline(admin.StackedInline):
 # ==================== TEST ATTEMPT ADMIN ====================
 @admin.register(TestAttempt)
 class TestAttemptAdmin(admin.ModelAdmin):
-    list_display = [
-        'id',
-        'user_info',
-        'test_info',
-        'status_badge',
-        'sections_progress',
-        'band_scores',
-        'started_at',
-        'grading_status'
-    ]
-
-    list_filter = [
+    # Ro'yxatda ko'rinadigan ustunlar
+    list_display = (
+        'user',
+        'test',
         'status',
-        'listening_submitted',
-        'reading_submitted',
-        'writing_submitted',
-        ('graded_at', admin.EmptyFieldListFilter),
+        'overall_band',
         'started_at',
-        'completed_at'
-    ]
-
-    search_fields = [
-        'user__username',
-        'user__first_name',
-        'user__last_name',
-        'user__email',
-        'test__title'
-    ]
-
-    readonly_fields = [
-        'started_at',
-        'completed_at',
-        'created_at',
-        'updated_at',
-        'listening_submitted_at',
-        'reading_submitted_at',
-        'writing_submitted_at',
-        'listening_started_at',
-        'reading_started_at',
-        'writing_started_at',
-        'overall_band_calculated'
-    ]
-
-    fieldsets = (
-        ('Test Info', {
-            'fields': ('user', 'test', 'status')
-        }),
-        ('Sections Status', {
-            'fields': (
-                ('listening_submitted', 'listening_submitted_at', 'listening_started_at'),
-                ('reading_submitted', 'reading_submitted_at', 'reading_started_at'),
-                ('writing_submitted', 'writing_submitted_at', 'writing_started_at'),
-            )
-        }),
-        ('Band Scores', {
-            'fields': (
-                'listening_band',
-                'reading_band',
-                'writing_band',
-                'overall_band',
-                'overall_band_calculated'
-            )
-        }),
-        ('Grading Info', {
-            'fields': (
-                'teacher_comment',
-                'graded_by',
-                'graded_at'
-            )
-        }),
-        ('Timestamps', {
-            'fields': (
-                'started_at',
-                'completed_at',
-                'created_at',
-                'updated_at'
-            ),
-            'classes': ('collapse',)
-        })
+        'is_graded_status'
     )
 
-    inlines = [ListeningAnswerInline, ReadingAnswerInline, WritingSubmissionInline]
+    # Filtrlash paneli (o'ng tomonda)
+    list_filter = ('status', 'test', 'started_at', 'graded_at')
 
-    actions = ['mark_as_completed', 'calculate_overall_bands']
+    # Qidiruv maydonlari
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'test__title')
 
-    def user_info(self, obj):
-        """User ma'lumotlari"""
-        url = reverse('admin:auth_user_change', args=[obj.user.id])
-        return format_html(
-            '<a href="{}">{}</a>',
-            url,
-            obj.user.get_full_name() or obj.user.username
-        )
+    # O'zgartirib bo'lmaydigan (faqat o'qish uchun) maydonlar
+    readonly_fields = ('started_at', 'completed_at', 'created_at', 'updated_at')
 
-    user_info.short_description = 'Student'
-
-    def test_info(self, obj):
-        """Test ma'lumotlari"""
-        return obj.test.title
-
-    test_info.short_description = 'Test'
-
-    def status_badge(self, obj):
-        """Status badge"""
-        colors = {
-            'in_progress': '#FFA500',  # Orange
-            'completed': '#28A745'  # Green
-        }
-        return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
-            colors.get(obj.status, '#6C757D'),
-            obj.get_status_display()
-        )
-
-    status_badge.short_description = 'Status'
-
-    def sections_progress(self, obj):
-        """Sectionlar progressi"""
-        sections = [
-            ('L', obj.listening_submitted),
-            ('R', obj.reading_submitted),
-            ('W', obj.writing_submitted)
-        ]
-
-        html = []
-        for name, submitted in sections:
-            color = '#28A745' if submitted else '#DC3545'
-            html.append(
-                f'<span style="background-color: {color}; color: white; '
-                f'padding: 2px 6px; border-radius: 3px; margin: 0 2px;">{name}</span>'
+    # Formada maydonlarni mantiqiy guruhlarga bo'lish
+    fieldsets = (
+        ('Asosiy ma\'lumotlar', {
+            'fields': ('user', 'test', 'status')
+        }),
+        ('Vaqt ko\'rsatkichlari', {
+            'fields': ('started_at', 'completed_at', 'created_at', 'updated_at'),
+            'classes': ('collapse',)  # Bu qismni yashirib qo'yish imkonini beradi
+        }),
+        ('Natijalar (Band Scores)', {
+            'fields': (
+                ('listening_band', 'reading_band', 'writing_band'),
+                'overall_band'
             )
-
-        return format_html(''.join(html))
-
-    sections_progress.short_description = 'Sections'
-
-    def band_scores(self, obj):
-        """Band scores"""
-        if obj.overall_band:
-            return format_html(
-                '<strong style="color: #007BFF; font-size: 14px;">Overall: {}</strong><br>'
-                '<small>L: {} | R: {} | W: {}</small>',
-                obj.overall_band,
-                obj.listening_band or '-',
-                obj.reading_band or '-',
-                obj.writing_band or '-'
+        }),
+        ('Tekshiruvchi (Teacher) ma\'lumotlari', {
+            'fields': ('teacher_comment', 'graded_by', 'graded_at')
+        }),
+        ('Section holatlari', {
+            'description': 'Har bir section topshirilganligi haqida ma\'lumot',
+            'fields': (
+                ('listening_submitted', 'listening_submitted_at'),
+                ('reading_submitted', 'reading_submitted_at'),
+                ('writing_submitted', 'writing_submitted_at')
             )
-        return format_html('<span style="color: #999;">Not graded</span>')
+        }),
+    )
 
-    band_scores.short_description = 'Band Scores'
+    # Custom ustun: Baholanganligini ko'rsatish uchun
+    def is_graded_status(self, obj):
+        return obj.is_graded()
 
-    def grading_status(self, obj):
-        """Baholash holati"""
-        if obj.is_graded():
-            return format_html(
-                '<span style="color: #28A745;">✓ Graded</span><br>'
-                '<small>{}</small>',
-                obj.graded_at.strftime('%Y-%m-%d %H:%M') if obj.graded_at else ''
-            )
-        return format_html('<span style="color: #DC3545;">Not graded</span>')
+    is_graded_status.boolean = True
+    is_graded_status.short_description = 'Graded'
 
-    grading_status.short_description = 'Grading'
-
-    def overall_band_calculated(self, obj):
-        """Hisoblangan overall band"""
-        band = obj.calculate_overall_band()
-        if band:
-            return format_html(
-                '<strong style="color: #007BFF; font-size: 16px;">{}</strong>',
-                band
-            )
-        return '-'
-
-    overall_band_calculated.short_description = 'Calculated Overall Band'
-
-    # Actions
-    @admin.action(description='Mark selected as completed')
-    def mark_as_completed(self, request, queryset):
-        """Tanlangan testlarni completed deb belgilash"""
-        updated = 0
-        for attempt in queryset:
-            if attempt.status != 'completed':
-                attempt.mark_completed()
-                updated += 1
-
-        self.message_user(
-            request,
-            f'{updated} test(s) marked as completed.'
-        )
-
-    @admin.action(description='Calculate overall band scores')
-    def calculate_overall_bands(self, request, queryset):
-        """Overall band scorelarni hisoblash"""
-        updated = 0
-        for attempt in queryset:
-            if attempt.calculate_overall_band():
-                attempt.save()
-                updated += 1
-
-        self.message_user(
-            request,
-            f'{updated} overall band score(s) calculated.'
-        )
+    # Model ichidagi overall scoreni hisoblash funksiyasini saqlashdan oldin chaqirish (ixtiyoriy)
+    def save_model(self, request, obj, form, change):
+        if obj.listening_band and obj.reading_band and obj.writing_band:
+            obj.calculate_overall_band()
+        super().save_model(request, obj, form, change)
 
 
 # ==================== LISTENING ANSWER ADMIN ====================
@@ -275,7 +131,7 @@ class ListeningAnswerAdmin(admin.ModelAdmin):
 
     def attempt_info(self, obj):
         """Attempt ma'lumotlari"""
-        url = reverse('admin:your_app_testattempt_change', args=[obj.attempt.id])
+        url = reverse('admin:app_testattempt_change', args=[obj.attempt.id])
         return format_html(
             '<a href="{}">{} - {}</a>',
             url,
@@ -319,7 +175,7 @@ class ReadingAnswerAdmin(admin.ModelAdmin):
 
     def attempt_info(self, obj):
         """Attempt ma'lumotlari"""
-        url = reverse('admin:your_app_testattempt_change', args=[obj.attempt.id])
+        url = reverse('admin:app_testattempt_change', args=[obj.attempt.id])
         return format_html(
             '<a href="{}">{} - {}</a>',
             url,
@@ -383,7 +239,7 @@ class WritingSubmissionAdmin(admin.ModelAdmin):
 
     def attempt_info(self, obj):
         """Attempt ma'lumotlari"""
-        url = reverse('admin:your_app_testattempt_change', args=[obj.attempt.id])
+        url = reverse('admin:app_testattempt_change', args=[obj.attempt.id])
         return format_html(
             '<a href="{}">{} - {}</a>',
             url,
