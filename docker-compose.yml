@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
   nginx:
     build: ./nginx
-    container_name: nginx
+    container_name: nginx_mock
     ports:
       - "8012:80"
     volumes:
