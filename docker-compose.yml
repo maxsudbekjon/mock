@@ -17,7 +17,17 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    ports:
+      - "8012:80"
+    volumes:
+      - static_volume:/static:ro
+      - ./media:/media:ro
+    depends_on:
+      web:
+        condition: service_started
   web:
     build: .
     container_name: mock_web
@@ -34,17 +44,23 @@ services:
       - ./reading:/app/reading
       - ./writing:/app/writing
       - ./media:/app/media
-    environment:
-      DEBUG: ${DEBUG:-True}
-      SECRET_KEY: ${SECRET_KEY}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-'*'}
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-mock_db}
-    ports:
-      - "8011:8000"
+      - static_volume:/app/staticfiles
+    env_file:
+      - .env
+
     depends_on:
       db:
         condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  static_volume:
