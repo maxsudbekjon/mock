@@ -39,13 +39,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_spectacular",
     "django_filters",
     "corsheaders",
-
     "app",
     "dashboard",
 ]
@@ -113,7 +111,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / os.getenv("DB_NAME", "db.sqlite3"),
+            "NAME": BASE_DIR / "data" / "db.sqlite3",
         }
     }
 

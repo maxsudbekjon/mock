@@ -11,7 +11,8 @@ services:
     env_file:
       - .env
     volumes:
-      - sqlite_data:/app/data
+      - .:/app 
+      - sqlite_data:/app/data 
       - static_volume:/app/staticfiles
       - ./media:/app/media
     restart: unless-stopped
