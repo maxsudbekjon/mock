@@ -28,6 +28,7 @@ services:
       - ./writing:/app/writing
       - ./media:/app/media
       - static_volume:/app/staticfiles
+      - ./db.sqlite3:/app/db.sqlite3
     env_file:
       - .env
 
