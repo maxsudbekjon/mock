@@ -201,8 +201,17 @@ SIMPLE_JWT = {
 # =====================
 # CORS
 # =====================
-CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False") == "True"
+CORS_ALLOWED_ORIGINS = [
+    "http://45.130.104.72",
+]
+
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    "authorization",
+    "content-type",
+    "x-csrftoken",
+]
 
 
 # =====================
