@@ -26,8 +26,8 @@ db.sqlite3-journal
 /static
 
 # Django migrations (ixtiyoriy - ba'zan commit qilish kerak)
-# */migrations/*.py
-# !*/migrations/__init__.py
+*/migrations/*.py
+!*/migrations/__init__.py
 
 # Environment variables
 .env
