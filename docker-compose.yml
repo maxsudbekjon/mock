@@ -1,5 +1,21 @@
-
 services:
+  web:
+    build: .
+    container_name: mock_web
+    command: >
+      sh -c "
+      python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
+      "
+    env_file:
+      - .env
+    volumes:
+      - sqlite_data:/app/data
+      - static_volume:/app/staticfiles
+      - ./media:/app/media
+    restart: unless-stopped
+
   nginx:
     build: ./nginx
     container_name: nginx_mock
@@ -11,39 +27,7 @@ services:
     depends_on:
       web:
         condition: service_started
-  web:
-    build: .
-    container_name: mock_web
-    command: >
-      sh -c "
-      python manage.py makemigrations --noinput &&
-      python manage.py migrate --noinput &&
-      mkdir -p /app/staticfiles && chmod 777 /app/staticfiles &&
-      python manage.py collectstatic --noinput &&
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
-      "
-    volumes:
-      - ./:/app
-      - ./static:/app/static
-      - ./staticfiles:/app/staticfiles
-      - ./listening:/app/listening
-      - ./reading:/app/reading
-      - ./writing:/app/writing
-      - ./media:/app/media
-      # - ./db.sqlite3:/app/db.sqlite3
-    env_file:
-      - .env
-
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000 || exit 1"]
-      interval: 30s
-      
-      timeout: 5s
-      retries: 3
-      start_period: 40s
-
-    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  sqlite_data:
   static_volume:
