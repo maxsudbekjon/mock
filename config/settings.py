@@ -202,7 +202,8 @@ SIMPLE_JWT = {
 # CORS
 # =====================
 CORS_ALLOWED_ORIGINS = [
-    "http://45.130.104.72",
+    "http://localhost:5173",
+    'http://45.130.104.72:8000'
 ]
 
 CORS_ALLOW_CREDENTIALS = True
