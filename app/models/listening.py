@@ -112,7 +112,7 @@ class ListeningQuestion(models.Model):
     )
 
     question_number = models.IntegerField(blank=True, null=True)
-    question_text = models.TextField()
+    question_text = models.TextField(blank=True, null=True)
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
 
     question_data = models.JSONField(
