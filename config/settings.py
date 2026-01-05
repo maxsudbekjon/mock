@@ -214,8 +214,12 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
 ]
 
-
+CORS_ALLOW_ALL_ORIGINS = True
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 # =====================
 # DEFAULT PK
 # =====================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
